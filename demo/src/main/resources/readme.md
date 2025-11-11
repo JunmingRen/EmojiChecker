@@ -1,0 +1,3 @@
+该目录下存放的是配置文件和页面相关代码
+static目录下存放静态资源，包括css、js、图片等
+templates目录下存放页面相关代码，包括html、thymeleaf等模板文件
