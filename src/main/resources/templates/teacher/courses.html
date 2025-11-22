@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的课程 - 教师工作空间</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    
+    <!-- 自定义配置 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#059669', // 教师端主色（绿色）
+                        secondary: '#10B981', // 辅助色
+                        accent: '#34D399', // 强调色
+                        neutral: '#F9FAFB', // 浅灰色
+                        dark: '#1F2937', // 深色
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                },
+            }
+        }
+    </script>
+    
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .card-shadow {
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            }
+            .hover-lift {
+                transition: transform 0.2s, box-shadow 0.2s;
+            }
+            .hover-lift:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            }
+            .transition-custom {
+                transition: all 0.3s ease;
+            }
+            .schedule-cell {
+                min-height: 120px;
+                position: relative;
+            }
+            .course-card {
+                background-color: rgba(5, 150, 105, 0.1);
+                border-left: 4px solid #059669;
+                padding: 8px;
+                border-radius: 4px;
+                font-size: 14px;
+                margin-bottom: 4px;
+                transition: all 0.2s ease;
+            }
+            .course-card:hover {
+                background-color: rgba(5, 150, 105, 0.15);
+                transform: scale(1.02);
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-neutral text-dark">
+    <!-- 顶部导航栏 -->
+    <header class="bg-white shadow-md fixed top-0 left-0 right-0 z-30">
+        <div class="container mx-auto px-4">
+            <div class="flex items-center justify-between h-16">
+                <!-- 左侧Logo和标题 -->
+                <div class="flex items-center space-x-3">
+                    <div class="text-primary">
+                        <i class="fa fa-graduation-cap text-2xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold text-dark">教育管理平台</h1>
+                        <p class="text-xs text-gray-500">教师工作空间</p>
+                    </div>
+                </div>
+                
+                <!-- 右侧功能区 -->
+                <div class="flex items-center space-x-6">
+                    <!-- 搜索框 -->
+                    <div class="relative hidden md:block">
+                        <input type="text" placeholder="搜索学生、课程..." 
+                            class="pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary w-64">
+                        <i class="fa fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                    </div>
+                    
+                    <!-- 通知图标 -->
+                    <div class="relative">
+                        <button class="p-2 rounded-full hover:bg-gray-100 transition-custom relative">
+                            <i class="fa fa-bell-o text-gray-600 text-lg"></i>
+                            <span class="absolute top-1 right-1 bg-red-500 rounded-full w-2 h-2"></span>
+                        </button>
+                    </div>
+                    
+                    <!-- 消息图标 -->
+                    <div class="relative">
+                        <button class="p-2 rounded-full hover:bg-gray-100 transition-custom">
+                            <i class="fa fa-envelope-o text-gray-600 text-lg"></i>
+                            <span class="absolute top-1 right-1 bg-primary rounded-full w-2 h-2"></span>
+                        </button>
+                    </div>
+                    
+                    <!-- 用户头像 -->
+                    <div class="relative group">
+                        <button class="flex items-center space-x-2 focus:outline-none">
+                            <img th:src="${teacher?.avatar ?: 'https://picsum.photos/id/1005/40/40'}" th:alt="'用户头像 - ' + ${teacher?.name ?: '教师'}" 
+                                class="w-10 h-10 rounded-full object-cover border-2 border-primary/30">
+                            <span class="hidden md:block font-medium" th:text="${teacher?.name ?: '教师'}"></span>
+                            <i class="fa fa-angle-down text-gray-500"></i>
+                        </button>
+                        
+                        <!-- 下拉菜单 -->
+                        <div class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-custom z-50">
+                            <a th:href="@{/teacher/dashboard/{teacherId}(teacherId=${teacher?.teacherId ?: 'T000001'})}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                <i class="fa fa-user mr-2 text-primary"></i>个人资料
+                            </a>
+                            <a href="/change-password" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                <i class="fa fa-lock mr-2 text-primary"></i>修改密码
+                            </a>
+                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                <i class="fa fa-cog mr-2 text-primary"></i>账户设置
+                            </a>
+                            <div class="border-t border-gray-200 my-1"></div>
+                            <a href="/logout" class="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100">
+                                <i class="fa fa-sign-out mr-2"></i>退出登录
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+    
+    <!-- 主内容区 -->
+    <div class="flex pt-16">
+        <!-- 左侧边栏 -->
+        <aside class="w-64 bg-white shadow-lg fixed left-0 bottom-0 top-16 overflow-y-auto z-20 transition-transform duration-300 transform -translate-x-full md:translate-x-0">
+            <nav class="p-4">
+                <div class="space-y-1">
+                    <!-- 导航项 -->
+                    <a th:href="@{/teacher/dashboard/{teacherId}(teacherId=${teacher?.teacherId ?: 'T000001'})}" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-gray-100 text-gray-700 transition-custom">
+                        <i class="fa fa-tachometer text-lg w-5 text-center"></i>
+                        <span class="font-medium">仪表盘</span>
+                    </a>
+                    
+                    <a th:href="@{/teacher/courses/{teacherId}(teacherId=${teacher?.teacherId ?: 'T000001'})}" class="flex items-center space-x-3 px-4 py-3 rounded-lg bg-primary/10 text-primary">
+                        <i class="fa fa-book text-lg w-5 text-center"></i>
+                        <span>我的课程</span>
+                    </a>
+                    
+                    <a href="#" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-gray-100 text-gray-700 transition-custom">
+                        <i class="fa fa-users text-lg w-5 text-center"></i>
+                        <span>学生管理</span>
+                    </a>
+                    
+                    <a href="#" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-gray-100 text-gray-700 transition-custom">
+                        <i class="fa fa-calendar text-lg w-5 text-center"></i>
+                        <span>课程安排</span>
+                    </a>
+                    
+                    <a href="#" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-gray-100 text-gray-700 transition-custom">
+                        <i class="fa fa-file-text-o text-lg w-5 text-center"></i>
+                        <span>成绩管理</span>
+                    </a>
+                    
+                    <a href="#" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-gray-100 text-gray-700 transition-custom">
+                        <i class="fa fa-comments-o text-lg w-5 text-center"></i>
+                        <span>师生交流</span>
+                    </a>
+                    
+                    <div class="pt-4 pb-2">
+                        <div class="px-4">
+                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">系统</p>
+                        </div>
+                    </div>
+                    
+                    <a href="#" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-gray-100 text-gray-700 transition-custom">
+                        <i class="fa fa-bar-chart text-lg w-5 text-center"></i>
+                        <span>数据统计</span>
+                    </a>
+                    
+                    <a href="#" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-gray-100 text-gray-700 transition-custom">
+                        <i class="fa fa-cog text-lg w-5 text-center"></i>
+                        <span>系统设置</span>
+                    </a>
+                </div>
+                
+                <!-- 快速帮助 -->
+                <div class="mt-8 p-4 bg-primary/5 rounded-lg border border-primary/20">
+                    <h3 class="font-medium text-primary mb-2 flex items-center">
+                        <i class="fa fa-question-circle mr-2"></i>
+                        需要帮助？
+                    </h3>
+                    <p class="text-sm text-gray-600 mb-3">查看使用指南或联系技术支持</p>
+                    <a href="#" class="block text-sm text-primary hover:text-primary/80 font-medium">
+                        <i class="fa fa-external-link mr-1"></i> 访问帮助中心
+                    </a>
+                </div>
+            </nav>
+        </aside>
+        
+        <!-- 主内容 -->
+        <main class="flex-1 md:ml-64 p-6">
+            <!-- 页面标题 -->
+            <div class="mb-8">
+                <h2 class="text-2xl font-bold text-gray-800">我的课程</h2>
+                <p class="text-gray-500">管理和查看您负责的所有课程</p>
+            </div>
+            
+            <!-- 功能按钮区 -->
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+                <div class="flex items-center space-x-2">
+                    <button class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-custom flex items-center">
+                        <i class="fa fa-plus mr-2"></i>创建课程
+                    </button>
+                    <button class="bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50 transition-custom flex items-center">
+                        <i class="fa fa-calendar-plus-o mr-2 text-primary"></i>排课
+                    </button>
+                </div>
+                <div class="relative w-full sm:w-64">
+                    <input type="text" placeholder="搜索课程..." 
+                        class="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary">
+                    <i class="fa fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                </div>
+            </div>
+            
+            <!-- 课程表视图切换 -->
+            <div class="bg-white rounded-lg shadow-md p-4 mb-6">
+                <div class="flex flex-wrap gap-2 mb-4">
+                    <button class="px-4 py-2 bg-primary text-white rounded-lg flex items-center">
+                        <i class="fa fa-table mr-2"></i>课程表视图
+                    </button>
+                    <button class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg flex items-center hover:bg-gray-50 transition-custom">
+                        <i class="fa fa-list mr-2"></i>列表视图
+                    </button>
+                    <button class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg flex items-center hover:bg-gray-50 transition-custom">
+                        <i class="fa fa-calendar mr-2"></i>日历视图
+                    </button>
+                </div>
+                
+                <!-- 日期选择器 -->
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-medium" id="current-week">第 <span id="week-number">1</span> 周</h3>
+                    <div class="flex items-center space-x-2">
+                        <button class="p-2 hover:bg-gray-100 rounded-full transition-custom">
+                            <i class="fa fa-angle-left text-gray-600"></i>
+                        </button>
+                        <span id="date-range" class="text-sm text-gray-600">2025-02-24 至 2025-03-01</span>
+                        <button class="p-2 hover:bg-gray-100 rounded-full transition-custom">
+                            <i class="fa fa-angle-right text-gray-600"></i>
+                        </button>
+                        <button class="ml-2 px-3 py-1 text-sm bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-custom">
+                            本周
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 课程表表格 -->
+                <div class="overflow-x-auto">
+                    <table class="w-full border-collapse">
+                        <!-- 表头 - 星期 -->
+                        <thead>
+                            <tr>
+                                <th class="w-16 border border-gray-200 p-2 bg-gray-50 text-left text-sm font-medium text-gray-500">时间</th>
+                                <th class="border border-gray-200 p-2 bg-gray-50 text-center text-sm font-medium text-gray-500">周一</th>
+                                <th class="border border-gray-200 p-2 bg-gray-50 text-center text-sm font-medium text-gray-500">周二</th>
+                                <th class="border border-gray-200 p-2 bg-gray-50 text-center text-sm font-medium text-gray-500">周三</th>
+                                <th class="border border-gray-200 p-2 bg-gray-50 text-center text-sm font-medium text-gray-500">周四</th>
+                                <th class="border border-gray-200 p-2 bg-gray-50 text-center text-sm font-medium text-gray-500">周五</th>
+                                <th class="border border-gray-200 p-2 bg-gray-50 text-center text-sm font-medium text-gray-500">周六</th>
+                                <th class="border border-gray-200 p-2 bg-gray-50 text-center text-sm font-medium text-gray-500">周日</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- 第1节课 -->
+                            <tr>
+                                <td class="border border-gray-200 p-2 bg-gray-50 text-sm text-gray-600">8:00-9:40</td>
+                                <td class="border border-gray-200 schedule-cell p-1">
+                                    <div class="course-card" data-course-id="1">
+                                        <div class="font-medium text-primary">软件工程</div>
+                                        <div class="text-xs text-gray-600">S3-101</div>
+                                        <div class="text-xs text-gray-500">19级软件工程1班</div>
+                                    </div>
+                                </td>
+                                <td class="border border-gray-200 schedule-cell p-1"></td>
+                                <td class="border border-gray-200 schedule-cell p-1"></td>
+                                <td class="border border-gray-200 schedule-cell p-1">
+                                    <div class="course-card" data-course-id="2">
+                                        <div class="font-medium text-primary">软件工程</div>
+                                        <div class="text-xs text-gray-600">S3-101</div>
+                                        <div class="text-xs text-gray-500">19级软件工程1班</div>
+                                    </div>
+                                </td>
+                                <td class="border border-gray-200 schedule-cell p-1"></td>
+                                <td class="border border-gray-200 schedule-cell p-1"></td>
+                                <td class="border border-gray-200 schedule-cell p-1"></td>
+                            </tr>
+                            <!-- 第2节课 -->
+                            <tr>
+                                <td class="border border-gray-200 p-2 bg-gray-50 text-sm text-gray-600">10:00-11:40</td>
+                                <td class="border border-gray-200 schedule-cell p-1"></td>
+                                <td class="border border-gray-200 schedule-cell p-1">
+                                    <div class="course-card" data-course-id="3">
+                                        <div class="font-medium text-primary">数据库原理</div>
+                                        <div class="text-xs text-gray-600">S2-203</div>
+                                        <div class="text-xs text-gray-500">20级计算机科学2班</div>
+                                    </div>
+                                </td>
+                                <td class="border border-gray-200 schedule-cell p-1"></td>
+                                <td class="border border-gray-200 schedule-cell p-1"></td>
+                                <td class="border border-gray-200 schedule-cell p-1">
+                                    <div class="course-card" data-course-id="4">
+                                        <div class="font-medium text-primary">数据库原理</div>
+                                        <div class="text-xs text-gray-600">S2-203</div>
+                                        <div class="text-xs text-gray-500">20级计算机科学2班</div>
+                                    </div>
+                                </td>
+                                <td class="border border-gray-200 schedule-cell p-1"></td>
+                                <td class="border border-gray-200 schedule-cell p-1"></td>
+                            </tr>
+                            <!-- 午休 -->
+                            <tr>
+                                <td class="border border-gray-200 p-2 bg-gray-50 text-sm text-gray-600">12:00-13:40</td>
+                                <td colspan="7" class="border border-gray-200 p-2 bg-gray-100 text-center text-xs text-gray-500">午休时间</td>
+                            </tr>
+                            <!-- 第3节课 -->
+                            <tr>
+                                <td class="border border-gray-200 p-2 bg-gray-50 text-sm text-gray-600">14:00-15:40</td>
+                                <td class="border border-gray-200 schedule-cell p-1">
+                                    <div class="course-card" data-course-id="5">
+                                        <div class="font-medium text-primary">Web前端开发</div>
+                                        <div class="text-xs text-gray-600">S4-305</div>
+                                        <div class="text-xs text-gray-500">21级软件工程3班</div>
+                                    </div>
+                                </td>
+                                <td class="border border-gray-200 schedule-cell p-1"></td>
+                                <td class="border border-gray-200 schedule-cell p-1">
+                                    <div class="course-card" data-course-id="6">
+                                        <div class="font-medium text-primary">Web前端开发</div>
+                                        <div class="text-xs text-gray-600">S4-305</div>
+                                        <div class="text-xs text-gray-500">21级软件工程3班</div>
+                                    </div>
+                                </td>
+                                <td class="border border-gray-200 schedule-cell p-1"></td>
+                                <td class="border border-gray-200 schedule-cell p-1"></td>
+                                <td class="border border-gray-200 schedule-cell p-1"></td>
+                                <td class="border border-gray-200 schedule-cell p-1"></td>
+                            </tr>
+                            <!-- 第4节课 -->
+                            <tr>
+                                <td class="border border-gray-200 p-2 bg-gray-50 text-sm text-gray-600">16:00-17:40</td>
+                                <td class="border border-gray-200 schedule-cell p-1"></td>
+                                <td class="border border-gray-200 schedule-cell p-1">
+                                    <div class="course-card" data-course-id="7">
+                                        <div class="font-medium text-primary">人工智能导论</div>
+                                        <div class="text-xs text-gray-600">S1-101</div>
+                                        <div class="text-xs text-gray-500">20级计算机科学1班</div>
+                                    </div>
+                                </td>
+                                <td class="border border-gray-200 schedule-cell p-1"></td>
+                                <td class="border border-gray-200 schedule-cell p-1"></td>
+                                <td class="border border-gray-200 schedule-cell p-1"></td>
+                                <td class="border border-gray-200 schedule-cell p-1"></td>
+                                <td class="border border-gray-200 schedule-cell p-1"></td>
+                            </tr>
+                            <!-- 晚间 -->
+                            <tr>
+                                <td class="border border-gray-200 p-2 bg-gray-50 text-sm text-gray-600">19:00-20:40</td>
+                                <td class="border border-gray-200 schedule-cell p-1"></td>
+                                <td class="border border-gray-200 schedule-cell p-1"></td>
+                                <td class="border border-gray-200 schedule-cell p-1">
+                                    <div class="course-card" data-course-id="8">
+                                        <div class="font-medium text-primary">算法设计与分析</div>
+                                        <div class="text-xs text-gray-600">线上课程</div>
+                                        <div class="text-xs text-gray-500">21级计算机科学1班</div>
+                                    </div>
+                                </td>
+                                <td class="border border-gray-200 schedule-cell p-1"></td>
+                                <td class="border border-gray-200 schedule-cell p-1"></td>
+                                <td class="border border-gray-200 schedule-cell p-1"></td>
+                                <td class="border border-gray-200 schedule-cell p-1"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- 我的课程列表 -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                    <i class="fa fa-list-ul mr-2 text-primary"></i>所有课程
+                </h3>
+                
+                <div class="overflow-x-auto">
+                    <table class="w-full border-collapse">
+                        <thead>
+                            <tr>
+                                <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">课程名称</th>
+                                <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">课程代码</th>
+                                <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">班级</th>
+                                <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">上课时间</th>
+                                <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">上课地点</th>
+                                <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">学生人数</th>
+                                <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="courses-table-body">
+                            <tr>
+                                <td class="px-4 py-3 border-b">软件工程</td>
+                                <td class="px-4 py-3 border-b">CS301</td>
+                                <td class="px-4 py-3 border-b">19级软件工程1班</td>
+                                <td class="px-4 py-3 border-b">周一、周四 8:00-9:40</td>
+                                <td class="px-4 py-3 border-b">S3-101</td>
+                                <td class="px-4 py-3 border-b">45</td>
+                                <td class="px-4 py-3 border-b">
+                                    <div class="flex space-x-2">
+                                        <a href="/teacher/emoji-chat?courseId=1" class="text-primary hover:text-primary/80">
+                                            <i class="fa fa-comments-o mr-1"></i>表情监控
+                                        </a>
+                                        <a href="#" class="text-gray-600 hover:text-gray-800">
+                                            <i class="fa fa-cog mr-1"></i>管理
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="px-4 py-3 border-b">数据库原理</td>
+                                <td class="px-4 py-3 border-b">CS302</td>
+                                <td class="px-4 py-3 border-b">20级计算机科学2班</td>
+                                <td class="px-4 py-3 border-b">周二、周五 10:00-11:40</td>
+                                <td class="px-4 py-3 border-b">S2-203</td>
+                                <td class="px-4 py-3 border-b">38</td>
+                                <td class="px-4 py-3 border-b">
+                                    <div class="flex space-x-2">
+                                        <a href="/teacher/emoji-chat?courseId=2" class="text-primary hover:text-primary/80">
+                                            <i class="fa fa-comments-o mr-1"></i>表情监控
+                                        </a>
+                                        <a href="#" class="text-gray-600 hover:text-gray-800">
+                                            <i class="fa fa-cog mr-1"></i>管理
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="px-4 py-3 border-b">Web前端开发</td>
+                                <td class="px-4 py-3 border-b">CS403</td>
+                                <td class="px-4 py-3 border-b">21级软件工程3班</td>
+                                <td class="px-4 py-3 border-b">周一、周三 14:00-15:40</td>
+                                <td class="px-4 py-3 border-b">S4-305</td>
+                                <td class="px-4 py-3 border-b">42</td>
+                                <td class="px-4 py-3 border-b">
+                                    <div class="flex space-x-2">
+                                        <a href="/teacher/emoji-chat?courseId=3" class="text-primary hover:text-primary/80">
+                                            <i class="fa fa-comments-o mr-1"></i>表情监控
+                                        </a>
+                                        <a href="#" class="text-gray-600 hover:text-gray-800">
+                                            <i class="fa fa-cog mr-1"></i>管理
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="px-4 py-3 border-b">人工智能导论</td>
+                                <td class="px-4 py-3 border-b">CS405</td>
+                                <td class="px-4 py-3 border-b">20级计算机科学1班</td>
+                                <td class="px-4 py-3 border-b">周二 16:00-17:40</td>
+                                <td class="px-4 py-3 border-b">S1-101</td>
+                                <td class="px-4 py-3 border-b">40</td>
+                                <td class="px-4 py-3 border-b">
+                                    <div class="flex space-x-2">
+                                        <a href="/teacher/emoji-chat?courseId=4" class="text-primary hover:text-primary/80">
+                                            <i class="fa fa-comments-o mr-1"></i>表情监控
+                                        </a>
+                                        <a href="#" class="text-gray-600 hover:text-gray-800">
+                                            <i class="fa fa-cog mr-1"></i>管理
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="px-4 py-3 border-b">算法设计与分析</td>
+                                <td class="px-4 py-3 border-b">CS306</td>
+                                <td class="px-4 py-3 border-b">21级计算机科学1班</td>
+                                <td class="px-4 py-3 border-b">周三 19:00-20:40</td>
+                                <td class="px-4 py-3 border-b">线上课程</td>
+                                <td class="px-4 py-3 border-b">35</td>
+                                <td class="px-4 py-3 border-b">
+                                    <div class="flex space-x-2">
+                                        <a href="/teacher/emoji-chat?courseId=5" class="text-primary hover:text-primary/80">
+                                            <i class="fa fa-comments-o mr-1"></i>表情监控
+                                        </a>
+                                        <a href="#" class="text-gray-600 hover:text-gray-800">
+                                            <i class="fa fa-cog mr-1"></i>管理
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- 分页 -->
+                <div class="mt-6 flex justify-between items-center">
+                    <div class="text-sm text-gray-500">
+                        显示 1-5 条，共 8 条
+                    </div>
+                    <div class="flex space-x-1">
+                        <button class="px-3 py-1 border border-gray-300 rounded-md bg-white text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                            <i class="fa fa-angle-left"></i>
+                        </button>
+                        <button class="px-3 py-1 border border-primary bg-primary text-white rounded-md">1</button>
+                        <button class="px-3 py-1 border border-gray-300 rounded-md bg-white text-gray-700 hover:bg-gray-50">2</button>
+                        <button class="px-3 py-1 border border-gray-300 rounded-md bg-white text-gray-500 hover:bg-gray-50">
+                            <i class="fa fa-angle-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <!-- JavaScript -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 设置当前日期
+            const now = new Date();
+            const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
+            
+            // 初始化周数和日期范围（这里使用模拟数据）
+            document.getElementById('week-number').textContent = '1';
+            
+            // 课程卡片点击事件
+            document.querySelectorAll('.course-card').forEach(card => {
+                card.addEventListener('click', function() {
+                    const courseId = this.getAttribute('data-course-id');
+                    // 这里可以添加点击课程卡片的处理逻辑
+                    console.log('点击课程:', courseId);
+                    // 例如跳转到课程详情页或表情监控页面
+                });
+            });
+            
+            // 简单的响应式处理
+            const handleResize = () => {
+                const sidebar = document.querySelector('aside');
+                if (window.innerWidth < 768) {
+                    sidebar.classList.add('-translate-x-full');
+                } else {
+                    sidebar.classList.remove('-translate-x-full');
+                }
+            };
+            
+            // 初始化时调用一次
+            handleResize();
+            window.addEventListener('resize', handleResize);
+        });
+    </script>
+</body>
+</html>

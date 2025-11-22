@@ -96,9 +96,9 @@
                     <!-- 用户头像 -->
                     <div class="relative group">
                         <button class="flex items-center space-x-2 focus:outline-none">
-                            <img src="https://picsum.photos/id/1027/40/40" alt="用户头像" 
+                            <img th:src="${student?.avatar ?: 'https://picsum.photos/id/1027/40/40'}" th:alt="'用户头像 - ' + ${student?.name ?: '学生'}" 
                                 class="w-10 h-10 rounded-full object-cover border-2 border-primary/30">
-                            <span class="hidden md:block font-medium">李小明</span>
+                            <span class="hidden md:block font-medium" th:text="${student?.name ?: '学生'}"></span>
                             <i class="fa fa-angle-down text-gray-500"></i>
                         </button>
                         
@@ -106,6 +106,9 @@
                         <div class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-custom z-50">
                             <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                                 <i class="fa fa-user mr-2 text-primary"></i>个人资料
+                            </a>
+                            <a href="/change-password" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                <i class="fa fa-lock mr-2 text-primary"></i>修改密码
                             </a>
                             <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                                 <i class="fa fa-cog mr-2 text-primary"></i>账户设置
@@ -153,9 +156,9 @@
                         <span>成绩查询</span>
                     </a>
                     
-                    <a href="#" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-gray-100 text-gray-700 transition-custom">
+                    <a th:href="'/student/emoji-chat/' + ${student?.studentId}" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-gray-100 text-gray-700 transition-custom">
                         <i class="fa fa-comments-o text-lg w-5 text-center"></i>
-                        <span>师生交流</span>
+                        <span>表情交流</span>
                     </a>
                     
                     <div class="pt-4 pb-2">
@@ -212,12 +215,30 @@
         <main class="flex-1 md:ml-64 p-6">
             <!-- 页面标题 -->
             <div class="mb-8">
-                <h2 class="text-2xl font-bold text-gray-800">欢迎回来，李小明</h2>
+                <h2 class="text-2xl font-bold text-gray-800" th:text="'欢迎回来，' + ${student?.name ?: '学生'}"></h2>
                 <p class="text-gray-500">今天是 <span id="currentDate"></span>，让我们开始新的学习吧！</p>
             </div>
             
             <!-- 快捷统计卡片 -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <!-- 表情反馈 -->
+                <a th:href="'/student/emoji-chat/' + ${student?.studentId}" class="block bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl card-shadow p-6 hover-lift cursor-pointer transition-transform hover:scale-[1.02]">
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-white/80">表情反馈</p>
+                            <h3 class="text-3xl font-bold text-white mt-1">
+                                <i class="fa fa-smile-o mr-2"></i>立即反馈
+                            </h3>
+                            <div class="text-sm text-white flex items-center mt-2">
+                                <i class="fa fa-comments mr-1"></i>
+                                <span>进入表情聊天室</span>
+                            </div>
+                        </div>
+                        <div class="bg-white/20 p-3 rounded-lg">
+                            <i class="fa fa-line-chart text-white text-xl"></i>
+                        </div>
+                    </div>
+                </a>
                 <!-- 我的课程 -->
                 <div class="bg-white rounded-xl card-shadow p-6 hover-lift">
                     <div class="flex items-start justify-between">

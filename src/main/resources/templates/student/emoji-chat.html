@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>课堂表情交流 - EmojiChecker</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .message-bubble-right {
+                background: linear-gradient(135deg, #DCF8C6 0%, #C9E8B8 100%);
+                border-radius: 18px 18px 4px 18px;
+                box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            }
+            .message-bubble-left {
+                background: white;
+                border-radius: 18px 18px 18px 4px;
+                box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            }
+            .emoji-btn {
+                transition: transform 0.2s;
+            }
+            .emoji-btn:hover {
+                transform: scale(1.2);
+            }
+            .emoji-btn.selected {
+                transform: scale(1.3);
+                box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+                border: 2px solid #4CAF50;
+            }
+            .chat-input:focus-within {
+                box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.3);
+            }
+            .message-enter {
+                animation: messageEnter 0.3s ease-out;
+            }
+            @keyframes messageEnter {
+                from {
+                    opacity: 0;
+                    transform: translateY(10px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+            .scrollbar-hide::-webkit-scrollbar {
+                display: none;
+            }
+            .scrollbar-hide {
+                -ms-overflow-style: none;
+                scrollbar-width: none;
+            }
+        }
+    </style>
+    
+    <!-- Tailwind 配置 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4CAF50',
+                        secondary: '#8BC34A',
+                        chat: {
+                            background: '#E5E5E5',
+                            bubble: '#DCF8C6'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                },
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-100 font-sans h-screen flex flex-col">
+    <!-- 顶部导航栏 -->
+    <header class="bg-white shadow-sm">
+        <div class="max-w-4xl mx-auto px-4 py-3 flex flex-col space-y-2">
+            <div class="flex items-center">
+                <a href="/student/dashboard" class="mr-4 text-gray-600 hover:text-primary">
+                    <i class="fa fa-arrow-left text-xl"></i>
+                </a>
+                <h1 class="text-xl font-bold text-gray-800">课堂表情交流</h1>
+            </div>
+            
+            <!-- 课程选择器 -->
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <span class="text-sm text-gray-600 mr-2">选择课程：</span>
+                    <select id="course-selector" class="px-3 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
+                        <option value="">所有课程</option>
+                        <!-- 课程选项将动态加载 -->
+                    </select>
+                </div>
+                <div class="flex items-center">
+                    <span class="text-sm text-gray-500" id="course-info">
+                        <i class="fa fa-users mr-1"></i>所有学生
+                    </span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 聊天主区域 -->
+    <main id="chat-container" class="flex-1 bg-chat-background overflow-y-auto scrollbar-hide p-4">
+        <!-- 欢迎消息 -->
+        <div class="flex justify-center mb-4">
+            <div class="bg-gray-200/70 text-gray-700 text-xs px-3 py-1 rounded-full">
+                欢迎来到课堂表情交流！选择表情表达你的想法
+            </div>
+        </div>
+        
+        <!-- 消息列表 -->
+        <div id="message-list" class="space-y-4">
+            <!-- 消息将动态加载到这里 -->
+        </div>
+        
+        <!-- 加载状态 -->
+        <div id="loading-indicator" class="flex justify-center mt-4">
+            <div class="text-sm text-gray-500 flex items-center">
+                <i class="fa fa-spinner fa-spin mr-2"></i>
+                <span>加载消息中...</span>
+            </div>
+        </div>
+    </main>
+
+    <!-- 表情选择和输入区域 -->
+    <footer class="bg-white border-t border-gray-200">
+        <!-- 表情选择面板 -->
+        <div class="px-4 py-3 bg-gray-50 border-b border-gray-200">
+            <div class="flex justify-between items-center mb-2">
+                <h3 class="text-sm font-medium text-gray-700">选择表情：</h3>
+                <span class="text-xs text-gray-500" id="selected-emoji-display">未选择</span>
+            </div>
+            <div class="grid grid-cols-8 gap-2" id="emoji-panel">
+                <button class="emoji-btn w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100" data-emoji="😊">😊</button>
+                <button class="emoji-btn w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100" data-emoji="😂">😂</button>
+                <button class="emoji-btn w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100" data-emoji="😮">😮</button>
+                <button class="emoji-btn w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100" data-emoji="😴">😴</button>
+                <button class="emoji-btn w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100" data-emoji="😕">😕</button>
+                <button class="emoji-btn w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100" data-emoji="😢">😢</button>
+                <button class="emoji-btn w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100" data-emoji="😡">😡</button>
+                <button class="emoji-btn w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100" data-emoji="👍">👍</button>
+                <button class="emoji-btn w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100" data-emoji="👎">👎</button>
+                <button class="emoji-btn w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100" data-emoji="🤔">🤔</button>
+                <button class="emoji-btn w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100" data-emoji="😍">😍</button>
+                <button class="emoji-btn w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100" data-emoji="😎">😎</button>
+                <button class="emoji-btn w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100" data-emoji="🤩">🤩</button>
+                <button class="emoji-btn w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100" data-emoji="😨">😨</button>
+                <button class="emoji-btn w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100" data-emoji="😤">😤</button>
+                <button class="emoji-btn w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100" data-emoji="👏">👏</button>
+            </div>
+        </div>
+        
+        <!-- 发送区域 -->
+        <div class="p-4">
+            <div class="flex items-center space-x-2">
+                <button id="submit-btn" class="bg-primary hover:bg-primary/90 text-white px-6 py-2 rounded-full shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                    <i class="fa fa-paper-plane mr-1"></i> 发送
+                </button>
+                <button id="refresh-btn" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-full shadow-sm transition-colors">
+                    <i class="fa fa-refresh mr-1"></i> 刷新
+                </button>
+                <span id="status-indicator" class="ml-auto text-xs text-gray-500">已连接</span>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 全局变量
+                let selectedEmoji = null;
+                let lastMessageId = 0;
+                let currentStudentName = /*[[${studentName}]]*/ '李小明'; // 使用Thymeleaf从后端获取学生名称
+                let currentStudentId = /*[[${studentId}]]*/ 'student123'; // 从Thymeleaf获取学生ID
+                let currentCourseId = /*[[${currentCourseId}]]*/ null; // 从Thymeleaf获取当前课程ID
+                let refreshInterval = null;
+                let errorCount = 0;
+                const MAX_ERRORS = 3;
+                const REFRESH_INTERVAL = 3000; // 3秒刷新一次
+            
+            // 获取DOM元素
+            const emojiButtons = document.querySelectorAll('.emoji-btn');
+            const selectedEmojiDisplay = document.getElementById('selected-emoji-display');
+            const submitBtn = document.getElementById('submit-btn');
+            const refreshBtn = document.getElementById('refresh-btn');
+            const messageList = document.getElementById('message-list');
+            const loadingIndicator = document.getElementById('loading-indicator');
+            const chatContainer = document.getElementById('chat-container');
+            const statusIndicator = document.getElementById('status-indicator');
+            
+            // 初始化 - 禁用提交按钮
+            submitBtn.disabled = true;
+            
+            // 表情按钮点击事件
+                emojiButtons.forEach(button => {
+                    button.addEventListener('click', function() {
+                        // 添加点击动画
+                        this.classList.add('scale-95');
+                        setTimeout(() => {
+                            this.classList.remove('scale-95');
+                        }, 150);
+                        
+                        // 移除之前选中的表情样式
+                        emojiButtons.forEach(btn => btn.classList.remove('selected'));
+                        // 添加当前选中的表情样式
+                        this.classList.add('selected');
+                        // 保存选中的表情
+                        selectedEmoji = this.getAttribute('data-emoji');
+                        // 更新显示
+                        selectedEmojiDisplay.textContent = selectedEmoji;
+                        // 启用提交按钮
+                        submitBtn.disabled = false;
+                    });
+                });
+            
+            // 提交表情
+            submitBtn.addEventListener('click', function() {
+                console.log('点击提交按钮');
+                if (!selectedEmoji) return;
+                
+                // 添加发送中状态
+                this.disabled = true;
+                const originalText = this.innerHTML;
+                this.innerHTML = '<i class="fa fa-spinner fa-spin mr-1"></i> 发送中...';
+                
+                console.log('发送表情:', selectedEmoji, '学生:', currentStudentName, '课程ID:', currentCourseId);
+                
+                // 准备请求参数
+                const formData = new URLSearchParams({
+                    'emoji': selectedEmoji,
+                    'studentName': currentStudentName,
+                    'studentId': currentStudentId
+                });
+                
+                // 如果有选择课程，添加课程ID
+                if (currentCourseId) {
+                    formData.append('courseId', currentCourseId);
+                }
+                
+                // 发送表情数据到后端
+                fetch('/api/emoji/submit', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: formData
+                })
+                .then(response => {
+                    console.log('服务器响应状态:', response.status);
+                    if (!response.ok) {
+                        throw new Error('网络响应错误: ' + response.status);
+                    }
+                    return response.json().catch(() => ({
+                        status: 'error', 
+                        message: '无法解析服务器响应'
+                    }));
+                })
+                .then(data => {
+                    console.log('提交结果:', data);
+                    if (data.status === 'success') {
+                        // 清除选中状态
+                        emojiButtons.forEach(btn => btn.classList.remove('selected'));
+                        selectedEmoji = null;
+                        selectedEmojiDisplay.textContent = '未选择';
+                        
+                        // 立即刷新消息列表
+                        checkNewMessages();
+                        
+                        // 显示成功状态
+                        statusIndicator.textContent = '发送成功';
+                        statusIndicator.className = 'ml-auto text-xs text-green-500';
+                    } else {
+                        console.error('提交失败，服务器返回错误:', data.message);
+                        statusIndicator.textContent = '发送失败';
+                        statusIndicator.className = 'ml-auto text-xs text-red-500';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error submitting emoji:', error);
+                    statusIndicator.textContent = '发送失败';
+                    statusIndicator.className = 'ml-auto text-xs text-red-500';
+                })
+                .finally(() => {
+                    // 恢复按钮状态
+                    this.innerHTML = originalText;
+                    this.disabled = false;
+                    
+                    // 3秒后恢复状态指示
+                    setTimeout(() => {
+                        if (statusIndicator.textContent !== '已连接') {
+                            statusIndicator.textContent = '已连接';
+                            statusIndicator.className = 'ml-auto text-xs text-green-500';
+                        }
+                    }, 3000);
+                });
+            });
+            
+            // 手动刷新按钮
+            refreshBtn.addEventListener('click', function() {
+                this.classList.add('animate-spin');
+                loadMessages().then(() => {
+                    this.classList.remove('animate-spin');
+                });
+            });
+            
+            // 加载消息
+            function loadMessages() {
+            console.log('加载表情消息，课程ID:', currentCourseId);
+            
+            // 构建请求URL
+            let url = '/api/emoji/messages';
+            if (currentCourseId) {
+                url += '?courseId=' + encodeURIComponent(currentCourseId);
+            }
+            
+            return fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('网络响应错误: ' + response.status);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('获取到表情消息:', data);
+                    if (data.status === 'success') {
+                        // 清空消息列表
+                        messageList.innerHTML = '';
+                        
+                        // 添加消息到列表
+                        if (data.messages && data.messages.length > 0) {
+                            data.messages.forEach(message => {
+                                addMessageToChat(message.emoji, message.studentName, message.time, message.studentName === currentStudentName);
+                            });
+                            
+                            // 更新最后消息时间戳作为下次刷新的参考
+                            if (data.messages.length > 0) {
+                                lastMessageId = Date.now();
+                            }
+                        } else {
+                            // 显示无消息提示
+                            const emptyMessage = document.createElement('div');
+                            emptyMessage.className = 'text-center text-gray-500 p-4';
+                            emptyMessage.innerHTML = '<i class="fa fa-comments-o text-2xl mb-2"></i><p>还没有消息，成为第一个发言的人吧！</p>';
+                            messageList.appendChild(emptyMessage);
+                        }
+                        
+                        // 滚动到底部
+                        scrollToBottom();
+                    }
+                    
+                    // 隐藏加载指示器
+                    loadingIndicator.style.display = 'none';
+                })
+                .catch(error => {
+                    console.error('加载消息失败:', error);
+                    statusIndicator.textContent = '加载失败';
+                    statusIndicator.className = 'ml-auto text-xs text-red-500';
+                    setTimeout(() => {
+                        statusIndicator.textContent = '已连接';
+                        statusIndicator.className = 'ml-auto text-xs text-gray-500';
+                    }, 3000);
+                    
+                    loadingIndicator.style.display = 'none';
+                });
+        }
+            
+            // 添加消息到聊天界面
+            function addMessageToChat(emoji, studentName, time, isOwn = false) {
+                const messageContainer = document.createElement('div');
+                messageContainer.className = isOwn ? 'flex justify-end' : 'flex justify-start';
+                
+                const messageContent = document.createElement('div');
+                messageContent.className = `max-w-xs ${isOwn ? 'message-bubble-right' : 'message-bubble-left'} p-3`;
+                
+                // 设置消息内容
+                messageContent.innerHTML = `
+                    <div class="flex items-center ${isOwn ? 'flex-row' : 'flex-row-reverse'}">
+                        <div class="text-2xl ${isOwn ? 'mr-2' : 'ml-2'}">${emoji}</div>
+                        <div class="${isOwn ? '' : 'text-right'}">
+                            <div class="text-xs ${isOwn ? 'text-gray-600' : 'text-gray-500'}">${studentName}</div>
+                            <div class="text-xs ${isOwn ? 'text-gray-600' : 'text-gray-500'}">${time}</div>
+                        </div>
+                    </div>
+                `;
+                
+                messageContainer.appendChild(messageContent);
+                messageList.appendChild(messageContainer);
+                
+                // 添加动画
+                messageContainer.classList.add('message-enter');
+            }
+            
+            // 滚动到底部
+            function scrollToBottom() {
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+            
+            // 检查新消息 - 由于没有专门的新消息API，我们直接重新加载所有消息
+            function checkNewMessages() {
+                // 如果已经发生多次错误，暂停刷新
+                if (errorCount >= MAX_ERRORS) {
+                    statusIndicator.textContent = '连接已暂停';
+                    statusIndicator.className = 'ml-auto text-xs text-yellow-500';
+                    stopAutoRefresh();
+                    return;
+                }
+                
+                // 构建请求URL
+                let url = '/api/emoji/messages';
+                if (currentCourseId) {
+                    url += '?courseId=' + encodeURIComponent(currentCourseId);
+                }
+                
+                fetch(url)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        // 重置错误计数
+                        errorCount = 0;
+                        statusIndicator.textContent = '已连接';
+                        statusIndicator.className = 'ml-auto text-xs text-green-500';
+                        
+                        if (data.status === 'success' && data.messages && data.messages.length > 0) {
+                            // 检查是否有新消息（简单实现：通过比较消息数量）
+                            const currentMessageCount = messageList.children.length;
+                            
+                            if (data.messages.length !== currentMessageCount) {
+                                // 记录之前的滚动位置
+                                const wasAtBottom = chatContainer.scrollHeight - chatContainer.scrollTop <= chatContainer.clientHeight + 100;
+                                
+                                // 清空消息列表
+                                messageList.innerHTML = '';
+                                
+                                // 添加所有消息
+                                data.messages.forEach(message => {
+                                    addMessageToChat(message.emoji, message.studentName, message.time, message.studentName === currentStudentName);
+                                });
+                                
+                                // 更新最后消息时间戳
+                                lastMessageId = Date.now();
+                                
+                                // 如果用户之前在底部，滚动到底部
+                                if (wasAtBottom || currentMessageCount === 0) {
+                                    scrollToBottom();
+                                }
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error checking new messages:', error);
+                        errorCount++;
+                        
+                        // 更新状态指示
+                        if (errorCount < MAX_ERRORS) {
+                            statusIndicator.textContent = `连接错误(${errorCount}/${MAX_ERRORS})`;
+                            statusIndicator.className = 'ml-auto text-xs text-red-500';
+                        }
+                    });
+            }
+            
+            // 启动自动刷新
+            function startAutoRefresh() {
+                // 避免重复设置定时器
+                if (refreshInterval) {
+                    return;
+                }
+                
+                // 立即执行一次检查
+                checkNewMessages();
+                
+                // 设置定时器
+                refreshInterval = setInterval(checkNewMessages, REFRESH_INTERVAL);
+            }
+            
+            // 停止自动刷新
+            function stopAutoRefresh() {
+                if (refreshInterval) {
+                    clearInterval(refreshInterval);
+                    refreshInterval = null;
+                }
+            }
+            
+            // 页面可见性变化时管理自动刷新
+            function handleVisibilityChange() {
+                if (document.hidden) {
+                    // 页面隐藏时停止刷新，节省资源
+                    stopAutoRefresh();
+                    statusIndicator.textContent = '已暂停';
+                    statusIndicator.className = 'ml-auto text-xs text-gray-500';
+                } else {
+                    // 页面重新可见时恢复刷新
+                    startAutoRefresh();
+                    statusIndicator.textContent = '已连接';
+                    statusIndicator.className = 'ml-auto text-xs text-green-500';
+                }
+            }
+            
+            // 监听页面可见性变化
+            document.addEventListener('visibilitychange', handleVisibilityChange);
+            
+            // 窗口聚焦时刷新一次
+            window.addEventListener('focus', function() {
+                if (!document.hidden) {
+                    checkNewMessages();
+                }
+            });
+            
+            // 课程选择器事件监听
+            document.getElementById('course-selector').addEventListener('change', function() {
+                const selectedCourseId = this.value ? this.value : null;
+                console.log('切换课程:', selectedCourseId);
+                
+                // 更新当前课程ID
+                currentCourseId = selectedCourseId;
+                
+                // 更新课程信息显示
+                if (selectedCourseId) {
+                    const selectedOption = this.options[this.selectedIndex];
+                    const courseName = selectedOption.getAttribute('data-course-name');
+                    document.getElementById('course-info').innerHTML = 
+                        `<i class="fa fa-book mr-1"></i>${courseName}`;
+                } else {
+                    document.getElementById('course-info').innerHTML = 
+                        `<i class="fa fa-users mr-1"></i>所有学生`;
+                }
+                
+                // 重新加载消息
+                loadMessages();
+            });
+            
+            // 初始化课程数据
+            function initializeCourses() {
+                // 这里应该从API获取学生的课程列表
+                // 为了演示，我们添加一些示例课程
+                const courses = [
+                    { id: '1', name: '软件工程导论' },
+                    { id: '2', name: '数据结构与算法' },
+                    { id: '3', name: '计算机网络' },
+                    { id: '4', name: '数据库原理' }
+                ];
+                
+                const courseSelector = document.getElementById('course-selector');
+                
+                // 添加课程选项
+                courses.forEach(course => {
+                    const option = document.createElement('option');
+                    option.value = course.id;
+                    option.textContent = course.name;
+                    option.setAttribute('data-course-name', course.name);
+                    courseSelector.appendChild(option);
+                });
+                
+                // 如果有默认课程ID，选中对应的课程
+                if (currentCourseId) {
+                    courseSelector.value = currentCourseId;
+                    // 触发change事件以更新UI
+                    courseSelector.dispatchEvent(new Event('change'));
+                }
+            }
+            
+            // 初始加载消息
+            console.log('页面初始化完成，开始加载消息');
+            initializeCourses();
+            loadMessages();
+            
+            // 启动自动刷新
+            console.log('启动自动刷新');
+            startAutoRefresh();
+        });
+    </script>
+</body>
+</html>

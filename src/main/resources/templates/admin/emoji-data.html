@@ -1,0 +1,1289 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>表情数据 - 管理员系统</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .card-hover {
+                transition: transform 0.3s ease, box-shadow 0.3s ease;
+            }
+            .card-hover:hover {
+                transform: translateY(-3px);
+                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+            }
+            .card-pulse {
+                animation: pulse 2s infinite;
+            }
+            @keyframes pulse {
+                0% {
+                    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
+                }
+                70% {
+                    box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
+                }
+                100% {
+                    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+                }
+            }
+            .emoji-card {
+                @apply bg-white rounded-xl shadow-md p-6 transition-all duration-300 card-hover text-center;
+            }
+            .emoji-card.active {
+                @apply ring-2 ring-primary;
+            }
+            .emoji-value {
+                @apply text-5xl font-bold mb-2 transform transition-transform duration-300;
+            }
+            .emoji-card:hover .emoji-value {
+                @apply scale-110;
+            }
+            .emoji-count {
+                @apply text-xl font-medium text-gray-700;
+            }
+            .emoji-percentage {
+                @apply text-sm text-gray-500 mt-1;
+            }
+            .btn-primary {
+                @apply bg-primary hover:bg-accent text-white font-medium py-2 px-4 rounded-lg transition-all duration-300 shadow-md hover:shadow-lg flex items-center justify-center;
+            }
+            .btn-secondary {
+                @apply bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 px-4 rounded-lg transition-all duration-300 flex items-center justify-center;
+            }
+            .fade-in {
+                animation: fadeIn 0.5s ease-in;
+            }
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(10px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            .loading-spinner {
+                @apply border-4 border-gray-200 border-t-primary rounded-full w-6 h-6 animate-spin;
+            }
+            .table-row-hover {
+                @apply hover:bg-gray-50 transition-colors duration-150;
+            }
+            .badge {
+                @apply px-2 py-1 rounded-full text-xs font-medium;
+            }
+            .badge-success {
+                @apply bg-green-100 text-green-800;
+            }
+            .badge-warning {
+                @apply bg-yellow-100 text-yellow-800;
+            }
+            .badge-danger {
+                @apply bg-red-100 text-red-800;
+            }
+        }
+    </style>
+    
+    <!-- Tailwind 配置 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3B82F6', // 蓝色主题
+                        secondary: '#60A5FA',
+                        accent: '#2563EB',
+                        neutral: '#1F2937',
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'sans-serif'],
+                    },
+                },
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 font-inter">
+    <!-- 顶部导航栏 -->
+    <nav class="bg-white shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 flex items-center">
+                        <i class="fa fa-shield text-primary text-2xl mr-2"></i>
+                        <span class="font-bold text-xl text-neutral">EmojiChecker 管理系统</span>
+                    </div>
+                    <div class="hidden sm:ml-10 sm:flex sm:space-x-8">
+                        <a href="/admin/dashboard" class="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                            <i class="fa fa-dashboard mr-1"></i>仪表盘
+                        </a>
+                        <a href="/admin/users" class="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                            <i class="fa fa-users mr-1"></i>用户管理
+                        </a>
+                        <a href="/admin/emoji-data" class="inline-flex items-center px-1 pt-1 border-b-2 border-primary text-sm font-medium text-primary">
+                            <i class="fa fa-bar-chart mr-1"></i>表情数据
+                        </a>
+                    </div>
+                </div>
+                <div class="flex items-center">
+                    <div class="ml-3 relative">
+                        <div>
+                            <button type="button" class="flex text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-white">
+                                <img class="h-8 w-8 rounded-full" src="https://picsum.photos/200" alt="管理员头像">
+                            </button>
+                        </div>
+                        <!-- 下拉菜单 -->
+                        <div class="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 py-1 hidden" id="user-menu">
+                            <a href="/change-password" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                <i class="fa fa-lock mr-1"></i>修改密码
+                            </a>
+                            <a href="/logout" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                <i class="fa fa-sign-out mr-1"></i>退出登录
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- 加载状态指示器 -->
+            <div id="loading-indicator" class="hidden mt-4 flex items-center justify-center text-gray-600">
+                <div class="loading-spinner mr-2"></div>
+                <span>正在加载数据...</span>
+            </div>
+        </div>
+        
+        <!-- 移动端菜单 -->
+        <div class="sm:hidden" id="mobile-menu">
+            <div class="pt-2 pb-3 space-y-1">
+                <a href="/admin/dashboard" class="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700">
+                    <i class="fa fa-dashboard mr-1"></i>仪表盘
+                </a>
+                <a href="/admin/users" class="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700">
+                    <i class="fa fa-users mr-1"></i>用户管理
+                </a>
+                <a href="/admin/emoji-data" class="bg-primary/10 block pl-3 pr-4 py-2 border-l-4 border-primary text-base font-medium text-primary">
+                    <i class="fa fa-bar-chart mr-1"></i>表情数据
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容区 -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- 页面标题 -->
+        <div class="mb-8 fade-in">
+            <h1 class="text-[clamp(1.5rem,3vw,2.5rem)] font-bold text-neutral mb-2 flex items-center">
+                <i class="fa fa-line-chart text-primary mr-3"></i>表情数据统计
+            </h1>
+            <p class="text-gray-600">查看系统中表情数据的详细统计和分析</p>
+        </div>
+        
+        <!-- 筛选条件 -->
+        <div class="bg-white rounded-xl shadow-md p-6 mb-6 fade-in">
+            <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div class="flex flex-wrap items-center gap-4">
+                    <div>
+                        <label for="date-range" class="text-sm font-medium text-gray-700 block mb-1">时间范围:</label>
+                        <select id="date-range" class="border border-gray-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-300">
+                            <option value="today">今天</option>
+                            <option value="yesterday">昨天</option>
+                            <option value="week">本周</option>
+                            <option value="month">本月</option>
+                            <option value="all">全部</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="emoji-type" class="text-sm font-medium text-gray-700 block mb-1">表情类型:</label>
+                        <select id="emoji-type" class="border border-gray-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-300">
+                            <option value="all">全部表情</option>
+                            <option value="positive">积极表情</option>
+                            <option value="negative">消极表情</option>
+                        </select>
+                    </div>
+                    <div id="custom-date-range" class="hidden">
+                        <label class="text-sm font-medium text-gray-700 block mb-1">自定义日期:</label>
+                        <div class="flex space-x-2">
+                            <input type="date" id="start-date" class="border border-gray-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-300">
+                            <input type="date" id="end-date" class="border border-gray-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-300">
+                        </div>
+                    </div>
+                </div>
+                <div class="flex flex-wrap gap-3">
+                    <button id="refresh-data" class="btn-primary">
+                        <i class="fa fa-refresh mr-2"></i>刷新数据
+                    </button>
+                    <button id="export-csv" class="btn-primary bg-green-600 hover:bg-green-700">
+                        <i class="fa fa-download mr-2"></i>导出CSV
+                    </button>
+                    <button id="export-pdf" class="btn-primary bg-red-600 hover:bg-red-700">
+                        <i class="fa fa-file-pdf-o mr-2"></i>导出PDF
+                    </button>
+                    <button id="toggle-chart-view" class="btn-secondary">
+                        <i class="fa fa-bar-chart mr-2"></i>图表视图
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 统计概览 -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mb-8">
+            <!-- 总表情数 -->
+            <div class="stat-card">
+                <div class="stat-icon bg-primary">
+                    <i class="fa fa-smile-o"></i>
+                </div>
+                <div class="stat-title">总表情数</div>
+                <div class="stat-value" id="total-emoji-count">0</div>
+                <div class="stat-change text-green-600">
+                    <i class="fa fa-arrow-up mr-1"></i>
+                    <span id="emoji-count-change">0%</span> 较昨日
+                </div>
+            </div>
+            
+            <!-- 活跃用户数 -->
+            <div class="stat-card">
+                <div class="stat-icon bg-blue-500">
+                    <i class="fa fa-users"></i>
+                </div>
+                <div class="stat-title">活跃用户</div>
+                <div class="stat-value" id="active-users">0</div>
+                <div class="stat-change text-green-600">
+                    <i class="fa fa-arrow-up mr-1"></i>
+                    <span id="active-users-change">0%</span> 较昨日
+                </div>
+            </div>
+            
+            <!-- 平均表情数 -->
+            <div class="stat-card">
+                <div class="stat-icon bg-green-500">
+                    <i class="fa fa-line-chart"></i>
+                </div>
+                <div class="stat-title">人均表情</div>
+                <div class="stat-value" id="avg-emoji-per-user">0</div>
+                <div class="stat-change text-green-600">
+                    <i class="fa fa-arrow-up mr-1"></i>
+                    <span id="avg-emoji-change">0%</span> 较昨日
+                </div>
+            </div>
+            
+            <!-- 表情类型数 -->
+            <div class="stat-card">
+                <div class="stat-icon bg-purple-500">
+                    <i class="fa fa-th"></i>
+                </div>
+                <div class="stat-title">表情种类</div>
+                <div class="stat-value" id="emoji-types">0</div>
+                <div class="stat-change text-green-600">
+                    <i class="fa fa-arrow-up mr-1"></i>
+                    <span id="emoji-types-change">0%</span> 较昨日
+                </div>
+            </div>
+        </div>
+        
+        <!-- 表情分布图表 -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <!-- 主要表情统计 -->
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900">主要表情分布</h3>
+                    <button class="text-primary hover:text-primary/80 text-sm font-medium">
+                        <i class="fa fa-refresh mr-1"></i>刷新
+                    </button>
+                </div>
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-2 gap-4" id="top-emojis">
+                    <!-- 表情卡片将通过JavaScript动态生成 -->
+                    <div class="flex items-center justify-center">
+                        <i class="fa fa-spinner fa-spin text-primary text-2xl"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 表情趋势图表 -->
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900">表情趋势</h3>
+                    <div class="flex space-x-2">
+                        <button class="px-3 py-1 text-xs font-medium rounded-full bg-primary/10 text-primary">日</button>
+                        <button class="px-3 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-700">周</button>
+                        <button class="px-3 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-700">月</button>
+                    </div>
+                </div>
+                <div class="h-64">
+                    <canvas id="emoji-trend-chart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 详细表情数据表格 -->
+        <div class="bg-white rounded-xl shadow-md overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">表情</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">数量</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">百分比</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">增长趋势</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200" id="emoji-data-table">
+                        <tr>
+                            <td colspan="5" class="px-6 py-10 text-center text-gray-500">
+                                <i class="fa fa-spinner fa-spin text-primary text-2xl mb-2"></i>
+                                <p>加载表情数据中...</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- 分页 -->
+            <div class="px-4 py-3 bg-gray-50 border-t border-gray-200 sm:px-6">
+                <div class="flex items-center justify-between">
+                    <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                        <div>
+                            <p class="text-sm text-gray-700">
+                                显示 <span id="emoji-range">1 到 10</span> 条，共 <span id="emoji-total">0</span> 条结果
+                            </p>
+                        </div>
+                        <div>
+                            <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                                <a href="#" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50" id="prev-emoji-page">
+                                    <span class="sr-only">上一页</span>
+                                    <i class="fa fa-chevron-left h-5 w-5"></i>
+                                </a>
+                                <a href="#" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-primary text-sm font-medium text-white" id="emoji-page-1">
+                                    1
+                                </a>
+                                <a href="#" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50" id="next-emoji-page">
+                                    <span class="sr-only">下一页</span>
+                                    <i class="fa fa-chevron-right h-5 w-5"></i>
+                                </a>
+                            </nav>
+                        </div>
+                    </div>
+                    
+                    <!-- 移动端分页 -->
+                    <div class="flex items-center sm:hidden">
+                        <a href="#" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                            上一页
+                        </a>
+                        <span class="mx-2 text-gray-700">|</span>
+                        <a href="#" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                            下一页
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 全局变量
+            let currentPage = 1;
+            const pageSize = 10;
+            let totalPages = 1;
+            let emojiChart = null;
+            let isChartView = false;
+
+            // DOM加载完成后初始化
+            document.addEventListener('DOMContentLoaded', function() {
+                // 初始化页面
+                initPage();
+                
+                // 初始化事件监听
+                initEventListeners();
+            });
+
+            // 初始化事件监听函数
+            function initEventListeners() {
+                // 日期范围变更事件
+                document.getElementById('date-range').addEventListener('change', function() {
+                    // 显示/隐藏自定义日期选择器
+                    const customDateRange = document.getElementById('custom-date-range');
+                    if (this.value === 'custom') {
+                        customDateRange.classList.remove('hidden');
+                    } else {
+                        customDateRange.classList.add('hidden');
+                    }
+                    refreshData();
+                });
+                
+                // 表情类型变更事件
+                document.getElementById('emoji-type').addEventListener('change', refreshData);
+                
+                // 刷新数据按钮
+                document.getElementById('refresh-data').addEventListener('click', refreshData);
+                
+                // 导出CSV按钮
+                document.getElementById('export-csv').addEventListener('click', exportToCSV);
+                
+                // 导出PDF按钮
+                document.getElementById('export-pdf').addEventListener('click', exportToPDF);
+                
+                // 图表视图切换
+                document.getElementById('toggle-chart-view').addEventListener('click', toggleChartView);
+                
+                // 自定义日期变更事件
+                document.getElementById('start-date').addEventListener('change', refreshData);
+                document.getElementById('end-date').addEventListener('change', refreshData);
+                
+                // 移动端菜单切换
+                const userMenuButton = document.querySelector('button[class*="focus:ring-2"]');
+                if (userMenuButton) {
+                    userMenuButton.addEventListener('click', function() {
+                        const userMenu = document.getElementById('user-menu');
+                        userMenu.classList.toggle('hidden');
+                    });
+                }
+            }
+            
+            // 显示加载状态
+            function showLoading(elementId) {
+                const element = document.getElementById(elementId);
+                if (element) {
+                    // 添加淡入动画
+                    element.style.opacity = '0';
+                    
+                    const loadingHTML = '<div class="flex items-center justify-center py-4">' +
+                        '<div class="loading-spinner mr-2"></div>' +
+                        '<span class="text-primary">加载中...</span>' +
+                        '</div>';
+                    
+                    if (elementId === 'emoji-data-table') {
+                        element.innerHTML = `<tr><td colspan="5" class="px-6 py-10 text-center text-gray-500">${loadingHTML}</td></tr>`;
+                    } else {
+                        element.innerHTML = loadingHTML;
+                    }
+                    
+                    // 触发重排后添加淡入效果
+                    setTimeout(() => {
+                        element.style.transition = 'opacity 0.3s ease';
+                        element.style.opacity = '1';
+                    }, 10);
+                }
+            }
+            
+            // 获取筛选参数
+            function getFilterParams() {
+                const params = {
+                    dateRange: document.getElementById('date-range').value,
+                    emojiType: document.getElementById('emoji-type').value
+                };
+                
+                // 添加自定义日期参数
+                if (params.dateRange === 'custom') {
+                    const startDate = document.getElementById('start-date').value;
+                    const endDate = document.getElementById('end-date').value;
+                    if (startDate) params.startDate = startDate;
+                    if (endDate) params.endDate = endDate;
+                }
+                
+                return params;
+            }
+            
+            // 构建查询URL
+            function buildQueryUrl(baseUrl, params) {
+                const queryString = Object.entries(params)
+                    .filter(([_, value]) => value && value !== 'all')
+                    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+                    .join('&');
+                
+                return queryString ? `${baseUrl}?${queryString}` : baseUrl;
+            }
+            
+            // 数字增长动画
+            function animateNumber(element, start, end, duration) {
+                let startTime = null;
+                
+                function step(timestamp) {
+                    if (!startTime) startTime = timestamp;
+                    const progress = Math.min((timestamp - startTime) / duration, 1);
+                    const value = Math.floor(progress * (end - start) + start);
+                    element.textContent = value.toLocaleString();
+                    
+                    if (progress < 1) {
+                        window.requestAnimationFrame(step);
+                    }
+                }
+                
+                window.requestAnimationFrame(step);
+            }
+            
+            // 加载统计数据
+            async function loadStats() {
+                try {
+                    const params = getFilterParams();
+                    const url = buildQueryUrl('/api/admin/emoji-stats', params);
+                    
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error('网络响应错误');
+                    
+                    const data = await response.json();
+                    
+                    // 更新统计卡片，添加数字动画
+                    const totalCount = data.totalCount || 0;
+                    const activeUsers = data.activeUsers || 0;
+                    const avgPerUser = data.averagePerUser || 0;
+                    const emojiTypes = data.emojiTypes || 0;
+                    
+                    animateNumber(document.getElementById('total-emoji-count'), 0, totalCount, 1000);
+                    animateNumber(document.getElementById('active-users'), 0, activeUsers, 1000);
+                    
+                    // 平均值需要特殊处理
+                    const avgElement = document.getElementById('avg-emoji-per-user');
+                    let currentAvg = 0;
+                    const avgInterval = setInterval(() => {
+                        currentAvg += avgPerUser / 30; // 分30步完成动画
+                        if (currentAvg >= avgPerUser) {
+                            currentAvg = avgPerUser;
+                            clearInterval(avgInterval);
+                        }
+                        avgElement.textContent = currentAvg.toFixed(1);
+                    }, 33);
+                    
+                    animateNumber(document.getElementById('emoji-types'), 0, emojiTypes, 1000);
+                    
+                    // 更新变化率
+                    document.getElementById('emoji-count-change').textContent = data.countChange ? `${data.countChange > 0 ? '+' : ''}${data.countChange}%` : '0%';
+                    document.getElementById('active-users-change').textContent = data.userChange ? `${data.userChange > 0 ? '+' : ''}${data.userChange}%` : '0%';
+                    document.getElementById('avg-emoji-change').textContent = data.avgChange ? `${data.avgChange > 0 ? '+' : ''}${data.avgChange}%` : '0%';
+                    document.getElementById('emoji-types-change').textContent = data.typesChange ? `${data.typesChange > 0 ? '+' : ''}${data.typesChange}%` : '0%';
+                    
+                    // 更新变化率颜色
+                    updateChangeRateColors();
+                } catch (error) {
+                    console.error('加载统计数据失败:', error);
+                    // 加载失败时显示模拟数据，带动画
+                    animateNumber(document.getElementById('total-emoji-count'), 0, 1876, 1000);
+                    animateNumber(document.getElementById('active-users'), 0, 212, 1000);
+                    
+                    const avgElement = document.getElementById('avg-emoji-per-user');
+                    let currentAvg = 0;
+                    const avgInterval = setInterval(() => {
+                        currentAvg += 8.8 / 30;
+                        if (currentAvg >= 8.8) {
+                            currentAvg = 8.8;
+                            clearInterval(avgInterval);
+                        }
+                        avgElement.textContent = currentAvg.toFixed(1);
+                    }, 33);
+                    
+                    animateNumber(document.getElementById('emoji-types'), 0, 24, 1000);
+                }
+            }
+            
+            // 更新变化率颜色
+            function updateChangeRateColors() {
+                const changeElements = document.querySelectorAll('.stat-change');
+                changeElements.forEach(el => {
+                    const text = el.textContent;
+                    if (text.includes('-')) {
+                        el.classList.remove('text-green-600');
+                        el.classList.add('text-red-600');
+                    } else {
+                        el.classList.remove('text-red-600');
+                        el.classList.add('text-green-600');
+                    }
+                });
+            }
+            
+            // 加载主要表情
+            async function loadTopEmojis() {
+                try {
+                    const params = getFilterParams();
+                    const url = buildQueryUrl('/api/admin/emoji-stats/top', params);
+                    
+                    showLoading('top-emojis');
+                    
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error('网络响应错误');
+                    
+                    const data = await response.json();
+                    const topEmojisContainer = document.getElementById('top-emojis');
+                    topEmojisContainer.innerHTML = '';
+                    
+                    if (data && data.length > 0) {
+                        // 为每个表情卡片添加延迟显示效果
+                        data.forEach((item, index) => {
+                            setTimeout(() => {
+                                const emojiCard = document.createElement('div');
+                                emojiCard.className = 'emoji-card fade-in';
+                                emojiCard.innerHTML = `
+                                    <div class="emoji-value transform transition-transform hover:scale-125">${item.emoji}</div>
+                                    <div class="emoji-count">${item.count}</div>
+                                    <div class="emoji-percentage">${item.percentage} 的总数</div>
+                                `;
+                                
+                                // 添加点击事件
+                                emojiCard.addEventListener('click', () => {
+                                    viewEmojiDetails(item.emoji);
+                                });
+                                
+                                topEmojisContainer.appendChild(emojiCard);
+                            }, index * 100); // 每个卡片延迟100ms
+                        });
+                    } else {
+                        // 没有数据时显示提示
+                        topEmojisContainer.innerHTML = '<div class="text-center text-gray-500 col-span-full py-4">暂无数据</div>';
+                    }
+                } catch (error) {
+                    console.error('加载主要表情失败:', error);
+                    // 加载失败时使用模拟数据
+                    loadMockTopEmojis();
+                }
+            }
+            
+            // 加载模拟主要表情（备用）
+            function loadMockTopEmojis() {
+                const topEmojisContainer = document.getElementById('top-emojis');
+                const topEmojis = [
+                    { emoji: '😊', count: 658, percentage: '35.1%' },
+                    { emoji: '👍', count: 469, percentage: '25.0%' },
+                    { emoji: '❤️', count: 375, percentage: '20.0%' },
+                    { emoji: '😮', count: 188, percentage: '10.0%' },
+                    { emoji: '😢', count: 94, percentage: '5.0%' },
+                    { emoji: '🎉', count: 92, percentage: '4.9%' }
+                ];
+                
+                topEmojisContainer.innerHTML = '';
+                topEmojis.forEach(item => {
+                    const emojiCard = document.createElement('div');
+                    emojiCard.className = 'emoji-card';
+                    emojiCard.innerHTML = `
+                        <div class="emoji-value">${item.emoji}</div>
+                        <div class="emoji-count">${item.count}</div>
+                        <div class="emoji-percentage">${item.percentage} 的总数</div>
+                    `;
+                    topEmojisContainer.appendChild(emojiCard);
+                });
+            }
+            
+            // 图表数据加载动画
+            function animateChart() {
+                if (emojiChart) {
+                    // 为图表添加动画效果
+                    emojiChart.data.datasets.forEach(dataset => {
+                        // 重置为0
+                        const originalData = [...dataset.data];
+                        dataset.data = dataset.data.map(() => 0);
+                        
+                        // 动画更新到原始数据
+                        setTimeout(() => {
+                            dataset.data = originalData;
+                            emojiChart.update('active');
+                        }, 100);
+                    });
+                }
+            }
+            
+            // 切换图表视图
+            function toggleChartView() {
+                isChartView = !isChartView;
+                const toggleBtn = document.getElementById('chart-view-toggle');
+                
+                if (isChartView) {
+                    toggleBtn.innerHTML = '<i class="fa fa-bar-chart mr-1"></i> 柱状图';
+                } else {
+                    toggleBtn.innerHTML = '<i class="fa fa-line-chart mr-1"></i> 折线图';
+                }
+                
+                // 重新初始化图表
+                initEmojiTrendChart();
+            }
+            
+            // 初始化表情趋势图表
+            async function initEmojiTrendChart() {
+                try {
+                    const params = getFilterParams();
+                    const url = buildQueryUrl('/api/admin/emoji-stats/trend', params);
+                    
+                    // 显示图表加载状态
+                    const chartContainer = document.getElementById('emoji-trend-chart').parentElement;
+                    chartContainer.classList.add('chart-loading');
+                    
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error('网络响应错误');
+                    
+                    const data = await response.json();
+                    const ctx = document.getElementById('emoji-trend-chart').getContext('2d');
+                    
+                    // 销毁现有图表
+                    if (emojiChart) {
+                        emojiChart.destroy();
+                    }
+                    
+                    // 创建新图表
+                    emojiChart = new Chart(ctx, {
+                        type: isChartView ? 'line' : 'bar',
+                        data: {
+                            labels: data.labels || ['1月', '2月', '3月', '4月', '5月', '6月'],
+                            datasets: data.datasets || [
+                                {
+                                    label: '😊 开心',
+                                    data: [350, 420, 380, 450, 520, 658],
+                                    backgroundColor: 'rgba(59, 130, 246, 0.8)',
+                                    borderColor: 'rgba(59, 130, 246, 1)',
+                                    borderWidth: 2,
+                                    tension: isChartView ? 0.4 : 0,
+                                    fill: isChartView
+                                },
+                                {
+                                    label: '👍 赞同',
+                                    data: [250, 320, 280, 350, 400, 469],
+                                    backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                                    borderColor: 'rgba(16, 185, 129, 1)',
+                                    borderWidth: 2,
+                                    tension: isChartView ? 0.4 : 0,
+                                    fill: isChartView
+                                },
+                                {
+                                    label: '❤️ 喜欢',
+                                    data: [200, 250, 220, 280, 320, 375],
+                                    backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                                    borderColor: 'rgba(239, 68, 68, 1)',
+                                    borderWidth: 2,
+                                    tension: isChartView ? 0.4 : 0,
+                                    fill: isChartView
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            animation: {
+                                duration: 1000,
+                                easing: 'easeInOutQuart'
+                            },
+                            interaction: {
+                                intersect: false,
+                                mode: 'index'
+                            },
+                            plugins: {
+                                tooltip: {
+                                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                    padding: 12,
+                                    titleFont: {
+                                        size: 14,
+                                        weight: 'bold'
+                                    },
+                                    bodyFont: {
+                                        size: 13
+                                    },
+                                    callbacks: {
+                                        label: function(context) {
+                                            return context.dataset.label + ': ' + context.parsed.y.toLocaleString();
+                                        }
+                                    }
+                                },
+                                legend: {
+                                    position: 'top',
+                                    labels: {
+                                        usePointStyle: true,
+                                        boxWidth: 8,
+                                        font: {
+                                            size: 12
+                                        },
+                                        padding: 20
+                                    }
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    grid: {
+                                        color: 'rgba(0, 0, 0, 0.05)'
+                                    },
+                                    ticks: {
+                                        font: {
+                                            size: 12
+                                        },
+                                        callback: function(value) {
+                                            return value >= 1000 ? (value / 1000) + 'k' : value;
+                                        }
+                                    }
+                                },
+                                x: {
+                                    grid: {
+                                        display: false
+                                    },
+                                    ticks: {
+                                        font: {
+                                            size: 12
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                    
+                    // 移除加载状态
+                    chartContainer.classList.remove('chart-loading');
+                    
+                    // 添加图表动画
+                    animateChart();
+                    
+                } catch (error) {
+                    console.error('初始化图表失败:', error);
+                    // 使用默认图表
+                    const ctx = document.getElementById('emoji-trend-chart').getContext('2d');
+                    
+                    if (emojiChart) {
+                        emojiChart.destroy();
+                    }
+                    
+                    emojiChart = new Chart(ctx, {
+                        type: isChartView ? 'line' : 'bar',
+                        data: {
+                            labels: ['1月', '2月', '3月', '4月', '5月', '6月'],
+                            datasets: [
+                                {
+                                    label: '😊 开心',
+                                    data: [350, 420, 380, 450, 520, 658],
+                                    backgroundColor: 'rgba(59, 130, 246, 0.8)',
+                                    borderColor: 'rgba(59, 130, 246, 1)',
+                                    borderWidth: 2,
+                                    tension: isChartView ? 0.4 : 0,
+                                    fill: isChartView
+                                },
+                                {
+                                    label: '👍 赞同',
+                                    data: [250, 320, 280, 350, 400, 469],
+                                    backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                                    borderColor: 'rgba(16, 185, 129, 1)',
+                                    borderWidth: 2,
+                                    tension: isChartView ? 0.4 : 0,
+                                    fill: isChartView
+                                },
+                                {
+                                    label: '❤️ 喜欢',
+                                    data: [200, 250, 220, 280, 320, 375],
+                                    backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                                    borderColor: 'rgba(239, 68, 68, 1)',
+                                    borderWidth: 2,
+                                    tension: isChartView ? 0.4 : 0,
+                                    fill: isChartView
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            animation: {
+                                duration: 1000,
+                                easing: 'easeInOutQuart'
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    grid: {
+                                        color: 'rgba(0, 0, 0, 0.05)'
+                                    }
+                                },
+                                x: {
+                                    grid: {
+                                        display: false
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+            
+            // 添加表格行动画效果
+            function animateTableRows() {
+                const rows = document.querySelectorAll('#emoji-data-table tr');
+                rows.forEach((row, index) => {
+                    // 设置初始状态
+                    row.style.opacity = '0';
+                    row.style.transform = 'translateY(10px)';
+                    row.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                    
+                    // 延迟动画效果，创建级联效果
+                    setTimeout(() => {
+                        row.style.opacity = '1';
+                        row.style.transform = 'translateY(0)';
+                    }, 50 * index);
+                });
+            }
+            
+            // 加载表情数据表格
+            async function loadEmojiDataTable(page = 1) {
+                try {
+                    const params = {
+                        ...getFilterParams(),
+                        page: page,
+                        size: 10
+                    };
+                    const url = buildQueryUrl('/api/admin/emoji-stats/list', params);
+                    
+                    showLoading('emoji-data-table');
+                    
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error('网络响应错误');
+                    
+                    const data = await response.json();
+                    const tableBody = document.getElementById('emoji-data-table');
+                    tableBody.innerHTML = '';
+                    
+                    if (data.content && data.content.length > 0) {
+                        // 更新分页信息
+                        currentPage = data.page || 1;
+                        totalPages = data.totalPages || 1;
+                        const totalElements = data.totalElements || 0;
+                        const startItem = (currentPage - 1) * 10 + 1;
+                        const endItem = Math.min(startItem + 9, totalElements);
+                        
+                        document.getElementById('emoji-range').textContent = `${startItem} 到 ${endItem}`;
+                        document.getElementById('emoji-total').textContent = totalElements;
+                        
+                        // 更新表格数据
+                        data.content.forEach((item, index) => {
+                            const row = document.createElement('tr');
+                            row.className = index % 2 === 0 ? 'bg-white' : 'bg-gray-50';
+                            // 添加鼠标悬停效果
+                            row.className += ' transition-all duration-200 hover:bg-gray-100 cursor-pointer';
+                            
+                            const trend = item.trend || '+0%';
+                            const trendClass = trend.startsWith('+') ? 'text-green-600' : 'text-red-600';
+                            const trendIcon = trend.startsWith('+') ? 'fa-arrow-up' : 'fa-arrow-down';
+                            
+                            // 百分比数值提取（用于进度条动画）
+                            const percentageValue = parseFloat(item.percentage) || 0;
+                            
+                            row.innerHTML = `
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="flex items-center">
+                                        <div class="text-3xl mr-3">${item.emoji}</div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="text-sm font-medium text-gray-900">${item.count}</div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="flex items-center">
+                                        <div class="w-20 bg-gray-200 rounded-full h-2.5 mr-2">
+                                            <div class="bg-primary h-2.5 rounded-full progress-bar" data-width="${percentageValue}%"></div>
+                                        </div>
+                                        <span class="text-sm font-medium text-gray-700">${item.percentage}</span>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${trendClass}">
+                                        <i class="fa ${trendIcon} mr-1"></i>${trend}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                    <button class="text-primary hover:text-primary/80 mr-3 transition-colors" onclick="viewEmojiDetails('${item.emoji}')"><i class="fa fa-search mr-1"></i>详情</button>
+                                    <button class="text-blue-500 hover:text-blue-700 transition-colors" onclick="exportEmojiData('${item.emoji}')"><i class="fa fa-download mr-1"></i>导出</button>
+                                </td>
+                            `;
+                            
+                            // 添加点击事件，整行可点击查看详情
+                            row.addEventListener('click', function(e) {
+                                // 如果点击的是按钮，不触发行点击事件
+                                if (!e.target.closest('button')) {
+                                    viewEmojiDetails(item.emoji);
+                                }
+                            });
+                            
+                            tableBody.appendChild(row);
+                        });
+                        
+                        // 添加进度条动画
+                        setTimeout(() => {
+                            const progressBars = document.querySelectorAll('.progress-bar');
+                            progressBars.forEach(bar => {
+                                bar.style.width = bar.dataset.width;
+                                bar.style.transition = 'width 1s ease-in-out';
+                            });
+                        }, 100);
+                        
+                        // 添加表格行动画
+                        animateTableRows();
+                    } else {
+                        // 没有数据时显示提示
+                        tableBody.innerHTML = `<tr><td colspan="5" class="px-6 py-10 text-center text-gray-500">暂无表情数据</td></tr>`;
+                        document.getElementById('emoji-range').textContent = '0 到 0';
+                        document.getElementById('emoji-total').textContent = '0';
+                    }
+                    
+                    // 更新分页按钮状态
+                    updatePaginationButtons();
+                } catch (error) {
+                    console.error('加载表格数据失败:', error);
+                    loadMockEmojiDataTable();
+                }
+            }
+            
+            // 加载模拟表格数据（备用）
+            function loadMockEmojiDataTable() {
+                const emojiData = [
+                    { emoji: '😊', count: 658, percentage: '35.1%', trend: '+15%' },
+                    { emoji: '👍', count: 469, percentage: '25.0%', trend: '+8%' },
+                    { emoji: '❤️', count: 375, percentage: '20.0%', trend: '+12%' },
+                    { emoji: '😮', count: 188, percentage: '10.0%', trend: '-3%' },
+                    { emoji: '😢', count: 94, percentage: '5.0%', trend: '+2%' },
+                    { emoji: '🎉', count: 92, percentage: '4.9%', trend: '+18%' },
+                    { emoji: '👏', count: 85, percentage: '4.5%', trend: '+7%' },
+                    { emoji: '🙏', count: 78, percentage: '4.2%', trend: '+5%' },
+                    { emoji: '🔥', count: 65, percentage: '3.5%', trend: '+22%' },
+                    { emoji: '😎', count: 42, percentage: '2.2%', trend: '+9%' }
+                ];
+                
+                const tableBody = document.getElementById('emoji-data-table');
+                tableBody.innerHTML = '';
+                
+                emojiData.forEach((item, index) => {
+                    const row = document.createElement('tr');
+                    row.className = index % 2 === 0 ? 'bg-white' : 'bg-gray-50';
+                    
+                    const trendClass = item.trend.startsWith('+') ? 'text-green-600' : 'text-red-600';
+                    const trendIcon = item.trend.startsWith('+') ? 'fa-arrow-up' : 'fa-arrow-down';
+                    
+                    row.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center">
+                                <div class="text-3xl mr-3">${item.emoji}</div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm font-medium text-gray-900">${item.count}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center">
+                                <div class="w-20 bg-gray-200 rounded-full h-2.5 mr-2">
+                                    <div class="bg-primary h-2.5 rounded-full" style="width: ${item.percentage}"></div>
+                                </div>
+                                <span class="text-sm font-medium text-gray-700">${item.percentage}</span>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${trendClass}">
+                                <i class="fa ${trendIcon} mr-1"></i>${item.trend}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <button class="text-primary hover:text-primary/80 mr-3"><i class="fa fa-search mr-1"></i>详情</button>
+                            <button class="text-blue-500 hover:text-blue-700"><i class="fa fa-download mr-1"></i>导出</button>
+                        </td>
+                    `;
+                    
+                    tableBody.appendChild(row);
+                });
+                
+                // 更新分页信息
+                document.getElementById('emoji-range').textContent = '1 到 10';
+                document.getElementById('emoji-total').textContent = emojiData.length;
+            }
+            
+            // 显示通知提示
+            function showNotification(message, type = 'info') {
+                // 创建通知元素
+                const notification = document.createElement('div');
+                
+                // 设置基础样式和动画
+                notification.className = 'fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg transform transition-all duration-500 opacity-0 translate-y-[-20px] z-50';
+                
+                // 根据类型设置不同样式
+                if (type === 'success') {
+                    notification.classList.add('bg-green-500', 'text-white');
+                    notification.innerHTML = `<i class="fa fa-check-circle mr-2"></i>${message}`;
+                } else if (type === 'error') {
+                    notification.classList.add('bg-red-500', 'text-white');
+                    notification.innerHTML = `<i class="fa fa-exclamation-circle mr-2"></i>${message}`;
+                } else {
+                    notification.classList.add('bg-blue-500', 'text-white');
+                    notification.innerHTML = `<i class="fa fa-info-circle mr-2"></i>${message}`;
+                }
+                
+                // 添加到页面
+                document.body.appendChild(notification);
+                
+                // 显示动画
+                setTimeout(() => {
+                    notification.classList.remove('opacity-0', 'translate-y-[-20px]');
+                }, 10);
+                
+                // 设置自动消失
+                setTimeout(() => {
+                    notification.classList.add('opacity-0', 'translate-y-[-20px]');
+                    setTimeout(() => {
+                        document.body.removeChild(notification);
+                    }, 500);
+                }, 3000);
+            }
+            
+            // 更新分页按钮
+            function updatePaginationButtons() {
+                const prevButton = document.getElementById('prev-emoji-page');
+                const nextButton = document.getElementById('next-emoji-page');
+                
+                // 更新上一页按钮
+                if (currentPage <= 1) {
+                    prevButton.classList.add('opacity-50', 'cursor-not-allowed');
+                    prevButton.removeAttribute('onclick');
+                } else {
+                    prevButton.classList.remove('opacity-50', 'cursor-not-allowed');
+                    prevButton.setAttribute('onclick', `loadEmojiDataTable(${currentPage - 1})`);
+                    // 添加点击反馈效果
+                    prevButton.addEventListener('click', function() {
+                        this.classList.add('scale-95');
+                        setTimeout(() => {
+                            this.classList.remove('scale-95');
+                        }, 150);
+                    }, {once: true});
+                }
+                
+                // 更新下一页按钮
+                if (currentPage >= totalPages) {
+                    nextButton.classList.add('opacity-50', 'cursor-not-allowed');
+                    nextButton.removeAttribute('onclick');
+                } else {
+                    nextButton.classList.remove('opacity-50', 'cursor-not-allowed');
+                    nextButton.setAttribute('onclick', `loadEmojiDataTable(${currentPage + 1})`);
+                    // 添加点击反馈效果
+                    nextButton.addEventListener('click', function() {
+                        this.classList.add('scale-95');
+                        setTimeout(() => {
+                            this.classList.remove('scale-95');
+                        }, 150);
+                    }, {once: true});
+                }
+            }
+            
+            // 导出CSV功能
+            document.getElementById('export-csv').addEventListener('click', async function() {
+                try {
+                    // 添加加载状态和反馈效果
+                    const button = this;
+                    const originalText = button.innerHTML;
+                    button.innerHTML = '<i class="fa fa-spinner fa-spin mr-2"></i>导出中...';
+                    button.disabled = true;
+                    
+                    const params = getFilterParams();
+                    const url = buildQueryUrl('/api/admin/export/csv', params);
+                    
+                    // 创建下载链接
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `emoji-data-${new Date().toISOString().split('T')[0]}.csv`;
+                    document.body.appendChild(link);
+                    link.click();
+                    
+                    // 显示成功通知
+                    showNotification('CSV文件导出成功', 'success');
+                    
+                    // 恢复按钮状态
+                    setTimeout(() => {
+                        button.innerHTML = originalText;
+                        button.disabled = false;
+                        document.body.removeChild(link);
+                    }, 500);
+                } catch (error) {
+                    console.error('导出CSV失败:', error);
+                    showNotification('导出CSV失败，请稍后重试', 'error');
+                }
+            });
+            
+            // 导出PDF功能
+            document.getElementById('export-pdf').addEventListener('click', async function() {
+                try {
+                    // 添加加载状态和反馈效果
+                    const button = this;
+                    const originalText = button.innerHTML;
+                    button.innerHTML = '<i class="fa fa-spinner fa-spin mr-2"></i>导出中...';
+                    button.disabled = true;
+                    
+                    const params = getFilterParams();
+                    const url = buildQueryUrl('/api/admin/export/pdf', params);
+                    
+                    // 创建下载链接
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `emoji-data-${new Date().toISOString().split('T')[0]}.pdf`;
+                    document.body.appendChild(link);
+                    link.click();
+                    
+                    // 显示成功通知
+                    showNotification('PDF文件导出成功', 'success');
+                    
+                    // 恢复按钮状态
+                    setTimeout(() => {
+                        button.innerHTML = originalText;
+                        button.disabled = false;
+                        document.body.removeChild(link);
+                    }, 500);
+                } catch (error) {
+                    console.error('导出PDF失败:', error);
+                    showNotification('导出PDF失败，请稍后重试', 'error');
+                }
+            });
+            
+            // 筛选条件变化事件
+            document.getElementById('date-range').addEventListener('change', function() {
+                // 重新加载数据
+                loadStats();
+                loadTopEmojis();
+                loadEmojiDataTable(1); // 重置到第一页
+                initEmojiTrendChart();
+            });
+            
+            document.getElementById('emoji-type').addEventListener('change', function() {
+                // 重新加载数据
+                loadStats();
+                loadTopEmojis();
+                loadEmojiDataTable(1); // 重置到第一页
+                initEmojiTrendChart();
+            });
+            
+            // 添加全局函数供表格使用
+            window.viewEmojiDetails = function(emoji) {
+                // 显示详情通知代替alert，提供更好的用户体验
+                showNotification(`查看表情 ${emoji} 的详细信息`);
+                // 这里可以扩展为打开详情模态框
+            };
+            
+            window.exportEmojiData = function(emoji) {
+                // 显示导出通知代替alert，提供更好的用户体验
+                showNotification(`开始导出表情 ${emoji} 的数据`);
+                // 这里可以实现针对特定表情的导出功能
+            };
+            
+            // 初始化页面，使用Promise.all优化加载顺序
+            async function initPage() {
+                try {
+                    // 显示页面加载提示
+                    showNotification('数据加载中，请稍候...');
+                    
+                    // 并行加载所有数据，提高页面加载速度
+                    await Promise.all([
+                        loadStats(),
+                        loadTopEmojis(),
+                        loadEmojiDataTable()
+                    ]);
+                    
+                    // 图表初始化可以在数据加载完成后进行
+                    await initEmojiTrendChart();
+                    
+                    // 显示加载完成通知
+                    showNotification('数据加载完成', 'success');
+                } catch (error) {
+                    console.error('页面初始化失败:', error);
+                    showNotification('部分数据加载失败，显示备用数据', 'error');
+                }
+            }
+            
+            // 调用初始化函数
+            initPage();
+        });
+    </script>
+</body>
+</html>

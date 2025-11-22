@@ -96,9 +96,9 @@
                     <!-- 用户头像 -->
                     <div class="relative group">
                         <button class="flex items-center space-x-2 focus:outline-none">
-                            <img src="https://picsum.photos/id/1005/40/40" alt="用户头像" 
+                            <img th:src="${teacher?.avatar ?: 'https://picsum.photos/id/1005/40/40'}" th:alt="'用户头像 - ' + ${teacher?.name ?: '教师'}" 
                                 class="w-10 h-10 rounded-full object-cover border-2 border-primary/30">
-                            <span class="hidden md:block font-medium">王老师</span>
+                            <span class="hidden md:block font-medium" th:text="${teacher?.name ?: '教师'}"></span>
                             <i class="fa fa-angle-down text-gray-500"></i>
                         </button>
                         
@@ -106,6 +106,9 @@
                         <div class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-custom z-50">
                             <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                                 <i class="fa fa-user mr-2 text-primary"></i>个人资料
+                            </a>
+                            <a href="/change-password" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                <i class="fa fa-lock mr-2 text-primary"></i>修改密码
                             </a>
                             <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                                 <i class="fa fa-cog mr-2 text-primary"></i>账户设置
@@ -133,7 +136,7 @@
                         <span class="font-medium">仪表盘</span>
                     </a>
                     
-                    <a href="#" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-gray-100 text-gray-700 transition-custom">
+                    <a th:href="@{/teacher/courses/{teacherId}(teacherId=${teacher?.teacherId ?: 'T000001'})}" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-gray-100 text-gray-700 transition-custom">
                         <i class="fa fa-book text-lg w-5 text-center"></i>
                         <span>我的课程</span>
                     </a>
@@ -193,14 +196,32 @@
         <main class="flex-1 md:ml-64 p-6">
             <!-- 页面标题 -->
             <div class="mb-8">
-                <h2 class="text-2xl font-bold text-gray-800">欢迎回来，王老师</h2>
+                <h2 class="text-2xl font-bold text-gray-800" th:text="'欢迎回来，' + ${teacher?.name ?: '教师'}"></h2>
                 <p class="text-gray-500">今天是 <span id="currentDate"></span>，让我们开始新的一天工作吧！</p>
             </div>
             
             <!-- 快捷统计卡片 -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                <!-- 课程数量 -->
-                <div class="bg-white rounded-xl card-shadow p-6 hover-lift">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <!-- 表情监控 -->
+                    <div class="bg-gradient-to-br from-primary to-teal-600 rounded-xl card-shadow p-6 hover-lift">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-white/80">表情监控</p>
+                                <h3 class="text-3xl font-bold text-white mt-1">
+                                    <i class="fa fa-line-chart mr-2"></i>实时监控
+                                </h3>
+                                <button id="monitor-btn" class="text-sm text-white flex items-center mt-2 hover:underline">
+                                <i class="fa fa-eye mr-1"></i>
+                                <span>查看学生表情</span>
+                            </button>
+                            </div>
+                            <div class="bg-white/20 p-3 rounded-lg">
+                                <i class="fa fa-smile-o text-white text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- 课程数量 -->
+                    <div class="bg-white rounded-xl card-shadow p-6 hover-lift cursor-pointer transition-all duration-300 hover:shadow-lg" th:onclick="@{|window.location.href='/teacher/courses/' + ${teacher?.teacherId ?: 'T000001'}|}">
                     <div class="flex items-start justify-between">
                         <div>
                             <p class="text-sm font-medium text-gray-500">我的课程</p>
@@ -233,22 +254,7 @@
                     </div>
                 </div>
                 
-                <!-- 待批作业 -->
-                <div class="bg-white rounded-xl card-shadow p-6 hover-lift">
-                    <div class="flex items-start justify-between">
-                        <div>
-                            <p class="text-sm font-medium text-gray-500">待批作业</p>
-                            <h3 class="text-3xl font-bold text-gray-800 mt-1">26</h3>
-                            <p class="text-sm text-red-500 flex items-center mt-2">
-                                <i class="fa fa-clock-o mr-1"></i>
-                                <span>3 项即将到期</span>
-                            </p>
-                        </div>
-                        <div class="bg-accent/10 p-3 rounded-lg">
-                            <i class="fa fa-file-text-o text-accent text-xl"></i>
-                        </div>
-                    </div>
-                </div>
+
                 
                 <!-- 今日课程 -->
                 <div class="bg-white rounded-xl card-shadow p-6 hover-lift">
@@ -268,33 +274,172 @@
                 </div>
             </div>
             
+            <!-- 我的课程列表 -->
+            <div class="bg-white rounded-xl card-shadow p-6 mb-8">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-lg font-bold text-gray-800">我的课程</h3>
+                    <a th:href="@{/teacher/courses/{teacherId}(teacherId=${teacher?.teacherId ?: 'T000001'})}" class="text-primary hover:text-primary/80 text-sm font-medium flex items-center">
+                        <span>查看全部</span>
+                        <i class="fa fa-angle-right ml-1"></i>
+                    </a>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="min-w-full">
+                        <thead>
+                            <tr class="bg-gray-50 text-gray-600 text-sm leading-normal">
+                                <th class="py-3 px-4 text-left">课程名称</th>
+                                <th class="py-3 px-4 text-left">课程代码</th>
+                                <th class="py-3 px-4 text-left">学生人数</th>
+                                <th class="py-3 px-4 text-left">状态</th>
+                                <th class="py-3 px-4 text-right">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-gray-600 text-sm">
+                            <!-- 课程列表将通过Thymeleaf动态加载 -->
+                            <tr th:each="course : ${courses}" class="border-b border-gray-200 hover:bg-gray-50">
+                                <td class="py-3 px-4">
+                                    <div class="flex items-center">
+                                        <div class="bg-primary/10 p-2 rounded-lg mr-3">
+                                            <i class="fa fa-book text-primary"></i>
+                                        </div>
+                                        <span th:text="${course.courseName}"></span>
+                                    </div>
+                                </td>
+                                <td class="py-3 px-4" th:text="${course.courseCode}"></td>
+                                <td class="py-3 px-4" th:text="${course.studentCount}"></td>
+                                <td class="py-3 px-4">
+                                    <span th:class="'px-2 py-1 rounded-full text-xs font-medium' + (${course.isActive ? ' bg-green-100 text-green-800' : ' bg-gray-100 text-gray-800'})" 
+                                          th:text="${course.isActive ? '进行中' : '已结束'}"></span>
+                                </td>
+                                <td class="py-3 px-4 text-right">
+                                    <div class="flex items-center justify-end space-x-2">
+                                        <a th:href="@{/teacher/course-detail(courseId=${course.id})}" class="text-gray-600 hover:text-primary">
+                                            <i class="fa fa-eye"></i>
+                                        </a>
+                                        <a th:href="@{/teacher/emoji-chat(courseId=${course.id})}" class="text-gray-600 hover:text-primary">
+                                            <i class="fa fa-comment-o"></i>
+                                        </a>
+                                        <button th:attr="data-course-id=${course.id}" class="text-gray-600 hover:text-primary start-monitor-btn">
+                                            <i class="fa fa-line-chart"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            
+                            <!-- 模拟数据，在没有实际数据时显示 -->
+                            <tr class="border-b border-gray-200 hover:bg-gray-50">
+                                <td class="py-3 px-4">
+                                    <div class="flex items-center">
+                                        <div class="bg-primary/10 p-2 rounded-lg mr-3">
+                                            <i class="fa fa-book text-primary"></i>
+                                        </div>
+                                        <span>软件工程导论</span>
+                                    </div>
+                                </td>
+                                <td class="py-3 px-4">CS2001</td>
+                                <td class="py-3 px-4">45</td>
+                                <td class="py-3 px-4">
+                                    <span class="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">进行中</span>
+                                </td>
+                                <td class="py-3 px-4 text-right">
+                                    <div class="flex items-center justify-end space-x-2">
+                                        <a href="#" class="text-gray-600 hover:text-primary">
+                                            <i class="fa fa-eye"></i>
+                                        </a>
+                                        <a href="/teacher/emoji-chat?courseId=1" class="text-gray-600 hover:text-primary">
+                                            <i class="fa fa-comment-o"></i>
+                                        </a>
+                                        <button data-course-id="1" class="text-gray-600 hover:text-primary start-monitor-btn">
+                                            <i class="fa fa-line-chart"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr class="border-b border-gray-200 hover:bg-gray-50">
+                                <td class="py-3 px-4">
+                                    <div class="flex items-center">
+                                        <div class="bg-primary/10 p-2 rounded-lg mr-3">
+                                            <i class="fa fa-book text-primary"></i>
+                                        </div>
+                                        <span>数据结构与算法</span>
+                                    </div>
+                                </td>
+                                <td class="py-3 px-4">CS3002</td>
+                                <td class="py-3 px-4">58</td>
+                                <td class="py-3 px-4">
+                                    <span class="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">进行中</span>
+                                </td>
+                                <td class="py-3 px-4 text-right">
+                                    <div class="flex items-center justify-end space-x-2">
+                                        <a href="#" class="text-gray-600 hover:text-primary">
+                                            <i class="fa fa-eye"></i>
+                                        </a>
+                                        <a href="/teacher/emoji-chat?courseId=2" class="text-gray-600 hover:text-primary">
+                                            <i class="fa fa-comment-o"></i>
+                                        </a>
+                                        <button data-course-id="2" class="text-gray-600 hover:text-primary start-monitor-btn">
+                                            <i class="fa fa-line-chart"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr class="border-b border-gray-200 hover:bg-gray-50">
+                                <td class="py-3 px-4">
+                                    <div class="flex items-center">
+                                        <div class="bg-primary/10 p-2 rounded-lg mr-3">
+                                            <i class="fa fa-book text-primary"></i>
+                                        </div>
+                                        <span>操作系统原理</span>
+                                    </div>
+                                </td>
+                                <td class="py-3 px-4">CS3003</td>
+                                <td class="py-3 px-4">42</td>
+                                <td class="py-3 px-4">
+                                    <span class="px-2 py-1 bg-gray-100 text-gray-800 rounded-full text-xs font-medium">已结束</span>
+                                </td>
+                                <td class="py-3 px-4 text-right">
+                                    <div class="flex items-center justify-end space-x-2">
+                                        <a href="#" class="text-gray-600 hover:text-primary">
+                                            <i class="fa fa-eye"></i>
+                                        </a>
+                                        <a href="/teacher/emoji-chat?courseId=3" class="text-gray-600 hover:text-primary">
+                                            <i class="fa fa-comment-o"></i>
+                                        </a>
+                                        <button data-course-id="3" class="text-gray-600 hover:text-primary start-monitor-btn">
+                                            <i class="fa fa-line-chart"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
             <!-- 图表区域 -->
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-                <!-- 学生出勤统计 -->
-                <div class="bg-white rounded-xl card-shadow p-6 lg:col-span-2 hover-lift">
-                    <div class="flex items-center justify-between mb-6">
-                        <h3 class="font-semibold text-lg">学生出勤统计</h3>
-                        <div class="flex space-x-2">
-                            <button class="px-3 py-1 text-sm rounded-md bg-gray-100 hover:bg-gray-200 transition-custom">本周</button>
-                            <button class="px-3 py-1 text-sm rounded-md bg-primary text-white">本月</button>
-                            <button class="px-3 py-1 text-sm rounded-md bg-gray-100 hover:bg-gray-200 transition-custom">本学期</button>
-                        </div>
-                    </div>
-                    <div class="h-80">
+                <!-- 学生出勤统计图表 -->
+                <div class="bg-white rounded-xl card-shadow p-6">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4">学生出勤统计</h3>
+                    <div class="h-64">
                         <canvas id="attendanceChart"></canvas>
                     </div>
                 </div>
                 
-                <!-- 学生成绩分布 -->
-                <div class="bg-white rounded-xl card-shadow p-6 hover-lift">
-                    <div class="flex items-center justify-between mb-6">
-                        <h3 class="font-semibold text-lg">学生成绩分布</h3>
-                        <button class="text-primary hover:text-primary/80 transition-custom">
-                            <i class="fa fa-ellipsis-v"></i>
-                        </button>
-                    </div>
-                    <div class="h-80">
+                <!-- 学生成绩分布图表 -->
+                <div class="bg-white rounded-xl card-shadow p-6">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4">学生成绩分布</h3>
+                    <div class="h-64">
                         <canvas id="gradesChart"></canvas>
+                    </div>
+                </div>
+                
+                <!-- 学生活跃度统计 -->
+                <div class="bg-white rounded-xl card-shadow p-6">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4">学生活跃度统计</h3>
+                    <div class="h-64">
+                        <canvas id="activityChart"></canvas>
                     </div>
                 </div>
             </div>
@@ -302,125 +447,65 @@
             <!-- 今日任务和最近活动 -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <!-- 今日任务 -->
-                <div class="bg-white rounded-xl card-shadow p-6 hover-lift">
-                    <div class="flex items-center justify-between mb-6">
-                        <h3 class="font-semibold text-lg">今日任务</h3>
-                        <button class="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-custom">
-                            <i class="fa fa-plus mr-1"></i> 添加任务
+                <div class="bg-white rounded-xl card-shadow p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold text-gray-800">今日任务</h3>
+                        <button class="text-primary hover:text-primary/80">
+                            <i class="fa fa-plus"></i>
                         </button>
                     </div>
-                    
-                    <div class="space-y-4">
-                        <div class="flex items-start p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-custom">
-                            <input type="checkbox" class="mt-1 mr-3 h-4 w-4 text-primary rounded border-gray-300 focus:ring-primary">
-                            <div class="flex-1">
-                                <p class="font-medium">批改高等数学作业</p>
-                                <p class="text-sm text-gray-500">10:00 - 12:00 · 2024-01-15</p>
-                            </div>
-                            <span class="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs">紧急</span>
+                    <div class="space-y-3">
+                        <div class="flex items-center">
+                            <input type="checkbox" class="h-4 w-4 text-primary rounded border-gray-300 focus:ring-primary mr-3">
+                            <span class="text-gray-700">批改软件工程导论作业</span>
                         </div>
-                        
-                        <div class="flex items-start p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-custom">
-                            <input type="checkbox" class="mt-1 mr-3 h-4 w-4 text-primary rounded border-gray-300 focus:ring-primary">
-                            <div class="flex-1">
-                                <p class="font-medium">准备明天的物理实验课</p>
-                                <p class="text-sm text-gray-500">14:00 - 16:00 · 2024-01-15</p>
-                            </div>
-                            <span class="px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs">中等</span>
+                        <div class="flex items-center">
+                            <input type="checkbox" class="h-4 w-4 text-primary rounded border-gray-300 focus:ring-primary mr-3">
+                            <span class="text-gray-700">准备数据结构与算法课件</span>
                         </div>
-                        
-                        <div class="flex items-start p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-custom">
-                            <input type="checkbox" class="mt-1 mr-3 h-4 w-4 text-primary rounded border-gray-300 focus:ring-primary">
-                            <div class="flex-1">
-                                <p class="font-medium">参加教学研讨会</p>
-                                <p class="text-sm text-gray-500">16:30 - 17:30 · 2024-01-15</p>
-                            </div>
-                            <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs">常规</span>
+                        <div class="flex items-center">
+                            <input type="checkbox" class="h-4 w-4 text-primary rounded border-gray-300 focus:ring-primary mr-3" checked>
+                            <span class="text-gray-400 line-through">查看学生反馈</span>
                         </div>
-                        
-                        <div class="flex items-start p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-custom">
-                            <input type="checkbox" class="mt-1 mr-3 h-4 w-4 text-primary rounded border-gray-300 focus:ring-primary">
-                            <div class="flex-1">
-                                <p class="font-medium">与学生家长沟通</p>
-                                <p class="text-sm text-gray-500">18:00 - 19:00 · 2024-01-15</p>
-                            </div>
-                            <span class="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs">低等</span>
+                        <div class="flex items-center">
+                            <input type="checkbox" class="h-4 w-4 text-primary rounded border-gray-300 focus:ring-primary mr-3">
+                            <span class="text-gray-700">与教学主任会议</span>
                         </div>
                     </div>
                 </div>
                 
                 <!-- 最近活动 -->
-                <div class="bg-white rounded-xl card-shadow p-6 hover-lift">
-                    <div class="flex items-center justify-between mb-6">
-                        <h3 class="font-semibold text-lg">最近活动</h3>
-                        <button class="text-primary hover:text-primary/80 transition-custom">查看全部</button>
+                <div class="bg-white rounded-xl card-shadow p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold text-gray-800">最近活动</h3>
+                        <a href="#" class="text-primary hover:text-primary/80 text-sm">查看全部</a>
                     </div>
-                    
-                    <div class="space-y-6">
+                    <div class="space-y-4">
                         <div class="flex">
-                            <div class="relative flex-shrink-0 mr-4">
-                                <img src="https://picsum.photos/id/1012/40/40" alt="学生头像" class="h-10 w-10 rounded-full object-cover">
-                                <span class="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-400 border-2 border-white"></span>
+                            <div class="flex-shrink-0 h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 mr-3">
+                                <i class="fa fa-user-plus"></i>
                             </div>
                             <div>
-                                <p class="text-sm text-gray-800">
-                                    <span class="font-medium">李小明</span> 提交了《高等数学》作业
-                                </p>
-                                <p class="text-xs text-gray-500 mt-1">10分钟前</p>
+                                <p class="text-sm text-gray-700">张三加入了软件工程导论课程</p>
+                                <p class="text-xs text-gray-500">2小时前</p>
                             </div>
                         </div>
-                        
                         <div class="flex">
-                            <div class="relative flex-shrink-0 mr-4">
-                                <img src="https://picsum.photos/id/1025/40/40" alt="学生头像" class="h-10 w-10 rounded-full object-cover">
-                                <span class="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-400 border-2 border-white"></span>
+                            <div class="flex-shrink-0 h-10 w-10 rounded-full bg-green-100 flex items-center justify-center text-green-600 mr-3">
+                                <i class="fa fa-comment"></i>
                             </div>
                             <div>
-                                <p class="text-sm text-gray-800">
-                                    <span class="font-medium">张小红</span> 向你发送了一条消息
-                                </p>
-                                <p class="text-xs text-gray-500 mt-1">30分钟前</p>
+                                <p class="text-sm text-gray-700">李四在数据结构与算法课程中提问</p>
+                                <p class="text-xs text-gray-500">4小时前</p>
                             </div>
                         </div>
-                        
                         <div class="flex">
-                            <div class="relative flex-shrink-0 mr-4">
-                                <div class="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                                    <i class="fa fa-book"></i>
-                                </div>
+                            <div class="flex-shrink-0 h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 mr-3">
+                                <i class="fa fa-file-text-o"></i>
                             </div>
                             <div>
-                                <p class="text-sm text-gray-800">
-                                    《物理学》课程已创建成功
-                                </p>
-                                <p class="text-xs text-gray-500 mt-1">2小时前</p>
-                            </div>
-                        </div>
-                        
-                        <div class="flex">
-                            <div class="relative flex-shrink-0 mr-4">
-                                <img src="https://picsum.photos/id/1010/40/40" alt="教师头像" class="h-10 w-10 rounded-full object-cover">
-                                <span class="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-400 border-2 border-white"></span>
-                            </div>
-                            <div>
-                                <p class="text-sm text-gray-800">
-                                    <span class="font-medium">刘教授</span> 评论了你的教学计划
-                                </p>
-                                <p class="text-xs text-gray-500 mt-1">3小时前</p>
-                            </div>
-                        </div>
-                        
-                        <div class="flex">
-                            <div class="relative flex-shrink-0 mr-4">
-                                <div class="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
-                                    <i class="fa fa-bell-o"></i>
-                                </div>
-                            </div>
-                            <div>
-                                <p class="text-sm text-gray-800">
-                                    系统提醒：请及时更新教学日历
-                                </p>
-                                <p class="text-xs text-gray-500 mt-1">昨天 16:45</p>
+                                <p class="text-sm text-gray-700">王五提交了操作系统原理作业</p>
+                                <p class="text-xs text-gray-500">昨天</p>
                             </div>
                         </div>
                     </div>
@@ -436,73 +521,56 @@
     
     <script>
         // 设置当前日期
-        document.addEventListener('DOMContentLoaded', function() {
+        const currentDateElement = document.getElementById('current-date');
+        if (currentDateElement) {
             const now = new Date();
-            const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
-            document.getElementById('currentDate').textContent = now.toLocaleDateString('zh-CN', options);
-            
-            // 学生出勤统计图表
-            const attendanceCtx = document.getElementById('attendanceChart').getContext('2d');
-            const attendanceChart = new Chart(attendanceCtx, {
-                type: 'line',
+            currentDateElement.textContent = now.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' });
+        }
+
+        // 初始化图表 - 学生出勤统计
+        const attendanceCtx = document.getElementById('attendanceChart');
+        if (attendanceCtx) {
+            new Chart(attendanceCtx, {
+                type: 'bar',
                 data: {
-                    labels: ['第1周', '第2周', '第3周', '第4周', '第5周', '第6周', '第7周', '第8周'],
-                    datasets: [
-                        {
-                            label: '出勤率',
-                            data: [95, 92, 96, 94, 97, 93, 95, 98],
-                            borderColor: '#059669',
-                            backgroundColor: 'rgba(5, 150, 105, 0.1)',
-                            tension: 0.3,
-                            fill: true
-                        },
-                        {
-                            label: '迟到率',
-                            data: [3, 4, 2, 3, 2, 4, 3, 2],
-                            borderColor: '#F59E0B',
-                            backgroundColor: 'rgba(245, 158, 11, 0.1)',
-                            tension: 0.3,
-                            fill: true
-                        }
-                    ]
+                    labels: /*[[${attendanceLabels}]]*/ ['周一', '周二', '周三', '周四', '周五'],
+                    datasets: [{
+                        label: '出勤人数',
+                        data: /*[[${attendanceData}]]*/ [30, 28, 32, 31, 29],
+                        backgroundColor: '#3b82f6',
+                        borderRadius: 6
+                    }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
                         legend: {
-                            position: 'top',
+                            display: false
                         }
                     },
                     scales: {
                         y: {
                             beginAtZero: true,
-                            max: 100,
                             ticks: {
-                                callback: function(value) {
-                                    return value + '%';
-                                }
+                                precision: 0
                             }
                         }
                     }
                 }
             });
-            
-            // 学生成绩分布图表
-            const gradesCtx = document.getElementById('gradesChart').getContext('2d');
-            const gradesChart = new Chart(gradesCtx, {
-                type: 'doughnut',
+        }
+
+        // 初始化图表 - 成绩分布
+        const scoreCtx = document.getElementById('scoreChart');
+        if (scoreCtx) {
+            new Chart(scoreCtx, {
+                type: 'pie',
                 data: {
-                    labels: ['优秀(90-100)', '良好(80-89)', '中等(70-79)', '及格(60-69)', '不及格(<60)'],
+                    labels: ['优秀', '良好', '中等', '及格', '不及格'],
                     datasets: [{
-                        data: [25, 35, 20, 15, 5],
-                        backgroundColor: [
-                            '#059669',
-                            '#10B981',
-                            '#34D399',
-                            '#A7F3D0',
-                            '#FECACA'
-                        ],
+                        data: /*[[${scoreDistribution}]]*/ [15, 25, 30, 20, 10],
+                        backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#6b7280', '#ef4444'],
                         borderWidth: 0
                     }]
                 },
@@ -511,28 +579,157 @@
                     maintainAspectRatio: false,
                     plugins: {
                         legend: {
-                            position: 'bottom',
+                            position: 'right'
                         }
                     }
                 }
             });
-            
-            // 移动端菜单切换
-            const mobileMenuButton = document.getElementById('mobile-menu-button');
-            const sidebar = document.querySelector('aside');
-            
+        }
+
+        // 初始化活跃度统计图表
+        const activityCtx = document.getElementById('activityChart');
+        if (activityCtx) {
+            new Chart(activityCtx, {
+                type: 'line',
+                data: {
+                    labels: /*[[${activityLabels}]]*/ ['第一周', '第二周', '第三周', '第四周'],
+                    datasets: [{
+                        label: '课堂互动次数',
+                        data: /*[[${activityData}]]*/ [45, 60, 55, 70],
+                        borderColor: '#8b5cf6',
+                        backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        // 移动端菜单切换
+        const mobileMenuButton = document.getElementById('mobile-menu-button');
+        const sidebar = document.querySelector('aside');
+        
+        if (mobileMenuButton && sidebar) {
             mobileMenuButton.addEventListener('click', function() {
                 sidebar.classList.toggle('-translate-x-full');
                 // 切换图标
                 const icon = this.querySelector('i');
-                if (icon.classList.contains('fa-bars')) {
+                if (icon && icon.classList.contains('fa-bars')) {
                     icon.classList.remove('fa-bars');
                     icon.classList.add('fa-times');
-                } else {
+                } else if (icon) {
                     icon.classList.remove('fa-times');
                     icon.classList.add('fa-bars');
                 }
             });
+        }
+        });
+
+    </script>
+    <script>
+        // 添加全局错误捕获
+        window.addEventListener('error', function(event) {
+            console.error('全局错误捕获:', event.error);
+            // 可以在这里添加更多错误处理逻辑
+        });
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            // 找到所有监控按钮并添加点击事件
+            const monitorButtons = document.querySelectorAll('#monitor-btn, .start-monitor-btn');
+            
+            if (monitorButtons) {
+                monitorButtons.forEach(button => {
+                    button.addEventListener('click', function() {
+                        // 检查按钮是否有data-course-id属性（课程列表中的按钮）
+                        const courseId = button.getAttribute('data-course-id');
+                        
+                        if (courseId) {
+                            // 如果有课程ID属性，直接跳转到对应课程的表情聊天页面
+                            window.location.href = '/teacher/emoji-chat?courseId=' + courseId;
+                        } else {
+                            // 否则调用后端API获取教师当前课程（顶部监控卡片中的按钮）
+                            fetch('/teacher/current-course')
+                                .then(response => response.json())
+                                .then(data => {
+                                    if (data.hasCourse) {
+                                        // 如果有课程，跳转到带有课程ID的表情聊天页面
+                                        window.location.href = '/teacher/emoji-chat?courseId=' + data.courseId;
+                                    } else {
+                                        // 如果没有课程，显示弹窗提醒
+                                        showNoCourseModal();
+                                    }
+                                })
+                                .catch(error => {
+                                    console.error('获取课程信息失败:', error);
+                                    // 出错时也显示弹窗
+                                    showNoCourseModal();
+                                });
+                        }
+                    });
+                });
+            }
+
+            // 显示无课程弹窗
+            function showNoCourseModal() {
+                // 检查是否已经存在弹窗元素
+                let modal = document.getElementById('no-course-modal');
+                
+                if (!modal) {
+                    // 创建弹窗HTML
+                    modal = document.createElement('div');
+                    modal.id = 'no-course-modal';
+                    modal.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-50';
+                    modal.innerHTML = `
+                        <div class="bg-white rounded-lg p-6 max-w-md w-full">
+                            <div class="text-center">
+                                <div class="text-red-500 text-4xl mb-4">
+                                    <i class="fa fa-exclamation-circle"></i>
+                                </div>
+                                <h3 class="text-xl font-bold mb-2">暂无进行中的课程</h3>
+                                <p class="text-gray-600 mb-6">您当前没有进行中的课程，请先创建或选择课程后再使用表情监控功能。</p>
+                                <button id="close-modal-btn" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+                                    我知道了
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    document.body.appendChild(modal);
+                    
+                    // 添加关闭按钮事件
+                    const closeBtn = document.getElementById('close-modal-btn');
+                    if (closeBtn) {
+                        closeBtn.addEventListener('click', function() {
+                            modal.remove();
+                        });
+                    }
+                    
+                    // 添加点击外部关闭事件
+                    modal.addEventListener('click', function(event) {
+                        if (event.target === modal) {
+                            modal.remove();
+                        }
+                    });
+                }
+                
+                // 显示弹窗
+                if (modal) {
+                    modal.classList.remove('hidden');
+                }
+            }
         });
     </script>
 </body>
